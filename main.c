@@ -46,8 +46,23 @@ const char PALETTE[32] = {
 static unsigned char program_memory[MEM_BYTES];
 static unsigned char program_block_flags[NUMBER_OF_BLOCKS];
 
+struct player_state {
+#define PLAYER_STATE_PICK_BLOCK 1
+#define PLAYER_STATE_PICK_BYTE  2
+#define PLAYER_STATE_ALTER_BYTE 3
+	unsigned char state;
+  	unsigned char current_block;
+  	unsigned char current_byte;
+  	unsigned int  score;
+};
 
+static struct player_state player1, player2;
 
+#define GAME_STATE_INTRO    0
+#define GAME_STATE_GAME     1
+#define GAME_STATE_GAMEOVER 2
+
+static unsigned char game_state = 0;
 
 // setup PPU and tables
 void setup_graphics() {
@@ -61,12 +76,18 @@ void reset_memory()
 {
   short i;
   for (i=0;i<MEM_BYTES;i++) {
-    program_memory[i] = 0;
+	program_memory[i] = 0;
   }
   
   for (i=0;i<NUMBER_OF_BLOCKS;i++) {
   	program_block_flags[i]=0;
   }
+  
+  player1.state = player2.state = PLAYER_STATE_PICK_BLOCK;
+  player1.current_block = 0;
+  player2.current_block = (NUMBER_OF_BLOCKS) >> 1;
+  player1.score = player2.score = 0;
+  player1.current_byte = player2.current_byte = 0;
 }
 
 void main(void)
@@ -74,8 +95,19 @@ void main(void)
   setup_graphics();
   // enable rendering
   ppu_on_all();
-  // infinite loop
+  
   reset_memory();
+  
+  // main loop
   while(1) {
+    switch (game_state) 
+    {
+      case GAME_STATE_INTRO:
+        break;
+      case GAME_STATE_GAME:
+        break;
+      case GAME_STATE_GAMEOVER:
+        break;
+    }
   }
 }
