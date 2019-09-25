@@ -18,6 +18,7 @@
 #include "vrambuf.h"
 //#link "vrambuf.c"
 
+
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
   0x01,			// screen color
@@ -32,6 +33,8 @@ const char PALETTE[32] = {
   0x0D,0x2D,0x3A,0x00,	// sprite palette 2
   0x0D,0x27,0x2A	// sprite palette 3
 };
+
+#define PLAYER_SCORE_MEM_WRITE (128)
 
 #define BYTES_PER_INSTRUCTION	2
 #define INSTRUCTIONS_PER_BLOCK  16
@@ -52,7 +55,7 @@ struct player_state {
   	unsigned int  score;
 };
 
-static struct player_state player1, player2;
+static struct player_state players[2];
 
 #define GAME_STATE_INTRO    0
 #define GAME_STATE_GAME     1
@@ -91,25 +94,24 @@ void setup_graphics() {
 
 void reset_memory()
 {
-  short i;
-  for (i=0;i<MEM_BYTES;i++) {
-	program_memory[i] = 0;
-  }
+  memfill(program_memory, 0, MEM_BYTES);
+  memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
   
-  for (i=0;i<NUMBER_OF_BLOCKS;i++) {
-  	program_block_flags[i]=0;
-  }
-  
-  player1.state = player2.state = PLAYER_STATE_PICK_BLOCK;
-  player1.current_block = 0;
-  player2.current_block = (NUMBER_OF_BLOCKS) >> 1;
-  player1.score = player2.score = 0;
-  player1.current_byte = player2.current_byte = 0;
+  players[0].state = players[1].state = PLAYER_STATE_PICK_BLOCK;
+  players[0].current_block = 0;
+  players[1].current_block = (NUMBER_OF_BLOCKS) >> 1;
+  players[0].score = players[1].score = 0;
+  players[0].current_byte = players[1].current_byte = 0;
   
   memfill(&cpu_threads[0], 0, sizeof(struct cpu_regs));
   memfill(&cpu_threads[1], 0, sizeof(struct cpu_regs));
 }
 
+void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
+{
+  players[own].score += PLAYER_SCORE_MEM_WRITE;
+  program_memory[addr] = val;
+}
 
 // use top two bits to track ownership of writen code.
 // has downsides.. but these could be taken advantage of.
