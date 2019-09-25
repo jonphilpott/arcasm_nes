@@ -1,7 +1,3 @@
-
-#include <stdlib.h>
-#include <string.h>
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -64,6 +60,27 @@ static struct player_state player1, player2;
 
 static unsigned char game_state = 0;
 
+struct cpu_regs {
+  unsigned char a, b, x, y, pc;
+};
+
+static struct cpu_regs cpu_threads[2];
+
+static char lfsr = 0x55;
+
+unsigned char get_random_byte()
+{
+  unsigned char rounds = 8;
+  
+  while (rounds--) {
+  	lfsr = (lfsr >> 1) | 
+    		((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
+  }
+  
+  return (unsigned char) lfsr;
+}
+
+
 // setup PPU and tables
 void setup_graphics() {
   // clear sprites
@@ -88,10 +105,34 @@ void reset_memory()
   player2.current_block = (NUMBER_OF_BLOCKS) >> 1;
   player1.score = player2.score = 0;
   player1.current_byte = player2.current_byte = 0;
+  
+  memfill(&cpu_threads[0], 0, sizeof(struct cpu_regs));
+  memfill(&cpu_threads[1], 0, sizeof(struct cpu_regs));
+}
+
+
+// use top two bits to track ownership of writen code.
+// has downsides.. but these could be taken advantage of.
+// .. and why not
+void cpu_tick(char thread)
+{
+  struct cpu_regs *t = &cpu_threads[thread];
+  // only pull even PCs and shave off last two bits
+  unsigned char p      = t->pc &  0x3E;
+  unsigned char owner  = t->pc >> 6;
+  unsigned char opcode = program_memory[p];
+  unsigned char arg    = program_memory[p + 1];
+  unsigned char pc_mod = 0;
+  
+  if (pc_mod == 0) {
+  	t->pc += 2;
+  }
 }
 
 void main(void)
 {  
+  unsigned char foo = 0;
+
   setup_graphics();
   // enable rendering
   ppu_on_all();
@@ -100,6 +141,7 @@ void main(void)
   
   // main loop
   while(1) {
+    foo = get_random_byte();
     switch (game_state) 
     {
       case GAME_STATE_INTRO:
