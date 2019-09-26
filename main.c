@@ -128,27 +128,51 @@ void cpu_tick(char thread)
 
   
   switch (opcode) {
-  #define OPCODE_NOP 00
+  #define OPCODE_NOP 0
     case OPCODE_NOP:
       	break;
-  #define OPCODE_LDA 01
+  #define OPCODE_LDA 1
     case OPCODE_LDA:
     	t->a = arg;
       	break;
-  #define OPCODE_STA 02
+  #define OPCODE_STA 2
     case OPCODE_STA:
       	cpu_mem_write(owner, arg, t->a);
     	break;
-  #define OPCODE_HOP 03
+  #define OPCODE_HOP 3
     case OPCODE_HOP:
       	pc_mod = 1;
       	t->pc += (signed char) arg;
       	break;
-  #define OPCODE_JMP 04
+  #define OPCODE_JMP 4
     case OPCODE_JMP:
       	t->pc = arg;
       	pc_mod = 1;
       	break;
+  #define OPCODE_ZHOP 5
+    case OPCODE_ZHOP:
+        if (t->a == 0) {
+          pc_mod = 1;
+          t->pc += 4;
+        }
+    break;
+  #define OPCODE_WLD 6
+    case OPCODE_WLD:
+    	t->x = program_memory[t->a];
+        t->y = program_memory[t->a + 1];
+        break;
+  #define OPCODE_WCP 7
+    case OPCODE_WCP:
+      	program_memory[t->a] = t->x;
+      	program_memory[t->a + 1] = t->y;
+        break;
+  #define OPCODE_MEMW 8
+    case OPCODE_MEMW:
+      	pc_mod = 1;
+      	if (program_memory[arg] == t->a) {
+        	t->pc += 2;
+        }
+        break;
     default:
         t->pc = 0;
   }
@@ -157,16 +181,37 @@ void cpu_tick(char thread)
   	t->pc += 2;
   }
 }
+void title_screen(void)
+{
+  ppu_wait_frame();
+  vram_adr(NTADR_A(12,12));
+  vram_write("ARCASM", 6);
+  vram_adr(NTADR_A(9, 14));
+  vram_write("PRESS START", 12);
+  
+  while (1) {
+    	if (pad_trigger(0) & PAD_START) break;
+  }
+}
+
+void gameover_screen(void)
+{
+  ppu_wait_frame();
+  vram_adr(NTADR_A(12,12));
+  vram_write("GAME OVER", 9);
+  
+  while (1) {
+    	if (pad_trigger(0) & PAD_START) break;
+  }
+}
 
 void main(void)
 {  
   unsigned char foo = 0;
 
   setup_graphics();
-  // enable rendering
-  ppu_on_all();
-  
-  reset_memory();
+
+  ppu_on_all(); 
   
   // main loop
   while(1) {
@@ -174,10 +219,14 @@ void main(void)
     switch (game_state) 
     {
       case GAME_STATE_INTRO:
+        title_screen();
+        game_state = GAME_STATE_GAMEOVER;
         break;
       case GAME_STATE_GAME:
         break;
       case GAME_STATE_GAMEOVER:
+        gameover_screen();
+        game_state = GAME_STATE_INTRO;
         break;
     }
   }
