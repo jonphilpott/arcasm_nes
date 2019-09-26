@@ -71,10 +71,8 @@ static struct cpu_regs cpu_threads[2];
 
 static char lfsr = 0x55;
 
-unsigned char get_random_byte()
-{
-  unsigned char rounds = 8;
-  
+unsigned char get_random_byte(unsigned char rounds)
+{  
   while (rounds--) {
   	lfsr = (lfsr >> 1) | 
     		((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
@@ -109,7 +107,8 @@ void reset_memory()
 
 void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
 {
-  players[own].score += PLAYER_SCORE_MEM_WRITE;
+  if (own != 3) 
+  	players[own].score += PLAYER_SCORE_MEM_WRITE;
   program_memory[addr] = val;
 }
 
@@ -125,6 +124,34 @@ void cpu_tick(char thread)
   unsigned char opcode = program_memory[p];
   unsigned char arg    = program_memory[p + 1];
   unsigned char pc_mod = 0;
+  
+
+  
+  switch (opcode) {
+  #define OPCODE_NOP 00
+    case OPCODE_NOP:
+      	break;
+  #define OPCODE_LDA 01
+    case OPCODE_LDA:
+    	t->a = arg;
+      	break;
+  #define OPCODE_STA 02
+    case OPCODE_STA:
+      	cpu_mem_write(owner, arg, t->a);
+    	break;
+  #define OPCODE_HOP 03
+    case OPCODE_HOP:
+      	pc_mod = 1;
+      	t->pc += (signed char) arg;
+      	break;
+  #define OPCODE_JMP 04
+    case OPCODE_JMP:
+      	t->pc = arg;
+      	pc_mod = 1;
+      	break;
+    default:
+        t->pc = 0;
+  }
   
   if (pc_mod == 0) {
   	t->pc += 2;
@@ -143,7 +170,7 @@ void main(void)
   
   // main loop
   while(1) {
-    foo = get_random_byte();
+    foo = get_random_byte(2);
     switch (game_state) 
     {
       case GAME_STATE_INTRO:
