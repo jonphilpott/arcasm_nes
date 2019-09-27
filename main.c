@@ -21,9 +21,9 @@
 
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] = { 
-  0x01,			// screen color
+  0x0F,			// screen color
 
-  0x11,0x30,0x27,0x00,	// background palette 0
+  0x11,0x30,0x2A,0x00,	// background palette 0
   0x1C,0x20,0x2C,0x00,	// background palette 1
   0x00,0x10,0x20,0x00,	// background palette 2
   0x06,0x16,0x26,0x00,   // background palette 3
@@ -181,10 +181,22 @@ void cpu_tick(char thread)
   	t->pc += 2;
   }
 }
+
+
+void clrscr() {
+  vrambuf_clear();
+  ppu_off();
+  vram_adr(0x2000);
+  vram_fill(0, 32*28);
+  vram_adr(0x0);
+  ppu_on_bg();
+}
+
 void title_screen(void)
 {
-  ppu_wait_frame();
-  vram_adr(NTADR_A(12,12));
+  clrscr();
+  
+  vram_adr(NTADR_A(9,12));
   vram_write("ARCASM", 6);
   vram_adr(NTADR_A(9, 14));
   vram_write("PRESS START", 12);
@@ -196,9 +208,13 @@ void title_screen(void)
 
 void gameover_screen(void)
 {
+  clrscr();
+
   ppu_wait_frame();
-  vram_adr(NTADR_A(12,12));
+  vram_adr(NTADR_A(9,12));
   vram_write("GAME OVER", 9);
+  vram_adr(NTADR_A(9, 14));
+  vram_write("PRESS START", 12);
   
   while (1) {
     	if (pad_trigger(0) & PAD_START) break;
