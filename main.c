@@ -53,6 +53,8 @@ struct player_state {
   	unsigned char current_block;
   	unsigned char current_byte;
   	unsigned int  score;
+  
+  	byte x_pos, y_pos;
 };
 
 static struct player_state players[2];
@@ -69,16 +71,18 @@ struct cpu_regs {
 
 static struct cpu_regs cpu_threads[2];
 
-static char lfsr = 0x55;
+static unsigned char lfsr = 0x55;
 
 unsigned char get_random_byte(unsigned char rounds)
-{  
+{ 
+  unsigned char out;
   while (rounds--) {
   	lfsr = (lfsr >> 1) | 
     		((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
+    	out = (out << 1) | (lfsr & 1);
   }
   
-  return (unsigned char) lfsr;
+  return out;
 }
 
 
@@ -118,14 +122,13 @@ void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
 void cpu_tick(char thread)
 {
   struct cpu_regs *t = &cpu_threads[thread];
-  // only pull even PCs and shave off last two bits
-  unsigned char p      = t->pc &  0x3E;
-  unsigned char owner  = t->pc >> 6;
-  unsigned char opcode = program_memory[p];
-  unsigned char arg    = program_memory[p + 1];
-  unsigned char pc_mod = 0;
-  
+  // shave off 1 bit, PC accesses should always be even (nice try)
+  unsigned char pc     = t->pc &  0xFE;
+  unsigned char opcode = program_memory[pc];
+  unsigned char arg    = program_memory[pc + 1];
+  unsigned char owner  = opcode >> 6;
 
+  unsigned char pc_mod = 0;
   
   switch (opcode) {
   #define OPCODE_NOP 0
@@ -183,7 +186,9 @@ void cpu_tick(char thread)
 }
 
 
-void clrscr() {
+
+void clrscr()
+{
   vrambuf_clear();
   ppu_off();
   vram_adr(0x2000);
@@ -194,15 +199,31 @@ void clrscr() {
 
 void title_screen(void)
 {
+  unsigned char by1 = 0;
+  unsigned char by2 = 0;
   clrscr();
   
   vram_adr(NTADR_A(9,12));
   vram_write("ARCASM", 6);
   vram_adr(NTADR_A(9, 14));
   vram_write("PRESS START", 12);
+
+  vram_adr(NTADR_A(10, 10));
   
   while (1) {
-    	if (pad_trigger(0) & PAD_START) break;
+
+    	by1 = get_random_byte(13);
+   	by2 = pad_trigger(0);
+    
+    	if (by2 & PAD_START) break;
+    	if (by2 & PAD_SELECT) {
+          lfsr = lfsr ^ 0x55 ;
+        }
+    
+    	ppu_wait_frame();
+    	vram_adr(NAMETABLE_A + (by1 << 2));
+	vram_put(1 + (by1 & 0xf));    
+    	vram_adr(0);
   }
 }
 
@@ -218,6 +239,24 @@ void gameover_screen(void)
   
   while (1) {
     	if (pad_trigger(0) & PAD_START) break;
+  }
+}
+
+//void draw_mem(struct player_state *p);
+//void draw_blocks();
+//void draw_player_sprite(struct player_state *p);
+//void handle_player_input(struct player_state *p);
+//void handle_enemies();
+//void maybe_cpu_tick();
+
+
+void game_loop(void) 
+{
+  clrscr();
+  
+  while (1) 
+  {
+ 	   
   }
 }
 
