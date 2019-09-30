@@ -115,7 +115,7 @@ void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
   	players[own].score += PLAYER_SCORE_MEM_WRITE;
   
   if ((addr & 1) == 0) {
-    val = (own << 6) | (val & 0x7F);
+    val = (own << 6) | (val & 0x3F);
   }
   
   program_memory[addr] = val;
@@ -134,10 +134,11 @@ void cpu_tick(char thread)
   unsigned char opcode = program_memory[pc];
   unsigned char arg    = program_memory[pc + 1];
   unsigned char owner  = opcode >> 6;
+  unsigned char aop    = opcode & 0x3F;
 
   unsigned char pc_mod = 0;
   
-  switch (opcode) {
+  switch (aop) {
   #define OPCODE_NOP 0
     case OPCODE_NOP:
       	break;
