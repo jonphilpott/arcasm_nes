@@ -20,19 +20,20 @@
 
 
 /*{pal:"nes",layout:"nes"}*/
-const char PALETTE[32] = { 
-  0x02,			// screen color
+const char PALETTE[32] =
+  { 
+   0x02,			// screen color
+   
+   0x2A,0x16,0x30,0x00,	// background palette 0
+   0x1C,0x20,0x2C,0x00,	// background palette 1
+   0x00,0x10,0x20,0x00,	// background palette 2
+   0x06,0x16,0x26,0x00,   // background palette 3
 
-  0x2A,0x16,0x30,0x00,	// background palette 0
-  0x1C,0x20,0x2C,0x00,	// background palette 1
-  0x00,0x10,0x20,0x00,	// background palette 2
-  0x06,0x16,0x26,0x00,   // background palette 3
-
-  0x16,0x35,0x24,0x00,	// sprite palette 0
-  0x00,0x37,0x25,0x00,	// sprite palette 1
-  0x0D,0x2D,0x3A,0x00,	// sprite palette 2
-  0x0D,0x27,0x2A	// sprite palette 3
-};
+   0x16,0x35,0x24,0x00,	// sprite palette 0
+   0x00,0x37,0x25,0x00,	// sprite palette 1
+   0x0D,0x2D,0x3A,0x00,	// sprite palette 2
+   0x0D,0x27,0x2A	// sprite palette 3
+  };
 
 #define PLAYER_SCORE_MEM_WRITE (128)
 
@@ -53,12 +54,12 @@ struct player_state {
 #define PLAYER_STATE_PICK_BLOCK 1
 #define PLAYER_STATE_PICK_BYTE  2
 #define PLAYER_STATE_ALTER_BYTE 3
-	unsigned char state;
-  	unsigned char current_block;
-  	unsigned int  score;
+  unsigned char state;
+  unsigned char current_block;
+  unsigned int  score;
   
-  	byte x, y;
-  	sbyte dx, dy;
+  byte x, y;
+  sbyte dx, dy;
 };
 
 static struct player_state players[2];
@@ -81,9 +82,9 @@ unsigned char get_random_byte(unsigned char rounds)
 { 
   unsigned char out;
   while (rounds--) {
-  	lfsr = (lfsr >> 1) | 
-    		((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
-    	out = (out << 1) | (lfsr & 1);
+    lfsr = (lfsr >> 1) | 
+      ((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
+    out = (out << 1) | (lfsr & 1);
   }
   
   return out;
@@ -121,7 +122,7 @@ void reset_memory()
 void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
 {
   if (own != 3) 
-  	players[own].score += PLAYER_SCORE_MEM_WRITE;
+    players[own].score += PLAYER_SCORE_MEM_WRITE;
   
   if ((addr & 1) == 0) {
     val = (own << 6) | (val & 0x3F);
@@ -149,52 +150,52 @@ void cpu_tick(char thread)
   
   
   switch (aop) {
-  #define OPCODE_NOP 0
-    case OPCODE_NOP:
-        t->a = get_random_byte(8);
-      	break;
-  #define OPCODE_LDA 1
-    case OPCODE_LDA:
-    	t->a = arg;
-      	break;
-  #define OPCODE_STA 2
-    case OPCODE_STA:
-      	cpu_mem_write(owner, arg, t->a);
-    	break;
-  #define OPCODE_HOP 3
-    case OPCODE_HOP:
-      	pc_mod = 1;
-      	t->pc += (signed char) arg;
-      	break;
-  #define OPCODE_JMP 4
-    case OPCODE_JMP:
-      	t->pc = arg;
-      	pc_mod = 1;
-      	break;
-  #define OPCODE_ZHOP 5
-    case OPCODE_ZHOP:
-        if (t->a == 0) {
-          pc_mod = 1;
-          t->pc += 4;
-        }
+#define OPCODE_NOP 0
+  case OPCODE_NOP:
+    t->a = get_random_byte(8);
     break;
-  #define OPCODE_WLD 6
-    case OPCODE_WLD:
-    	t->x = program_memory[t->a];
-        t->y = program_memory[t->a + 1];
-        break;
-  #define OPCODE_WCP 7
-    case OPCODE_WCP:
-      	program_memory[t->a] = t->x;
-      	program_memory[t->a + 1] = t->y;
-        break;
-  #define OPCODE_MEMW 8
-    case OPCODE_MEMW:
-      	pc_mod = 1;
-      	if (program_memory[arg] == t->a) {
-        	t->pc += 2;
-        }
-        break;
+#define OPCODE_LDA 1
+  case OPCODE_LDA:
+    t->a = arg;
+    break;
+#define OPCODE_STA 2
+  case OPCODE_STA:
+    cpu_mem_write(owner, arg, t->a);
+    break;
+#define OPCODE_HOP 3
+  case OPCODE_HOP:
+    pc_mod = 1;
+    t->pc += (signed char) arg;
+    break;
+#define OPCODE_JMP 4
+  case OPCODE_JMP:
+    t->pc = arg;
+    pc_mod = 1;
+    break;
+#define OPCODE_ZHOP 5
+  case OPCODE_ZHOP:
+    if (t->a == 0) {
+      pc_mod = 1;
+      t->pc += 4;
+    }
+    break;
+#define OPCODE_WLD 6
+  case OPCODE_WLD:
+    t->x = program_memory[t->a];
+    t->y = program_memory[t->a + 1];
+    break;
+#define OPCODE_WCP 7
+  case OPCODE_WCP:
+    program_memory[t->a] = t->x;
+    program_memory[t->a + 1] = t->y;
+    break;
+#define OPCODE_MEMW 8
+  case OPCODE_MEMW:
+    pc_mod = 1;
+    if (program_memory[arg] == t->a) {
+      t->pc += 2;
+    }
+    break;
   }
   
   if (pc_mod == 0) t->pc += 2;
@@ -225,9 +226,9 @@ void title_screen(void)
   vram_adr(NTADR_A(10, 10));
   
   while (1) {
-    	by1 = get_random_byte(8);
-   	by2 = pad_trigger(0) | pad_trigger(1);
-    	if (by2 & PAD_START) break;
+    by1 = get_random_byte(8);
+    by2 = pad_trigger(0) | pad_trigger(1);
+    if (by2 & PAD_START) break;
   }
 }
 
@@ -242,7 +243,7 @@ void gameover_screen(void)
   vram_write("PRESS START", 12);
   
   while (1) {
-    	if (pad_trigger(0) & PAD_START) break;
+    if (pad_trigger(0) & PAD_START) break;
   }
 }
 
@@ -260,28 +261,28 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   vrambuf_put(NTADR_A(sx, sy-1), "MEM------", 8);
   
   for (i = 0; i < 16 ; i++) 
-  {
-    addr =   (p->current_block * 32) + (i * 2);
-    opcode = program_memory[addr];
-    arg    = program_memory[(addr + 1) & 0xFF];
-    owner  = opcode >> 6;
+    {
+      addr =   (p->current_block * 32) + (i * 2);
+      opcode = program_memory[addr];
+      arg    = program_memory[(addr + 1) & 0xFF];
+      owner  = opcode >> 6;
     
-    line[0] = 1 + (addr >> 4);
-    line[1] = 1 + (addr & 0xF);
-    line[2] = 0x11 + owner;
-    line[3] = 1 + (opcode >> 4);
-    line[4] = 1 + (opcode & 0xF);
-    line[5] = 0x3A;
-    line[6] = 1 + (arg >> 4);
-    line[7] = 1 + (arg & 0xF); 
+      line[0] = 1 + (addr >> 4);
+      line[1] = 1 + (addr & 0xF);
+      line[2] = 0x11 + owner;
+      line[3] = 1 + (opcode >> 4);
+      line[4] = 1 + (opcode & 0xF);
+      line[5] = 0x3A;
+      line[6] = 1 + (arg >> 4);
+      line[7] = 1 + (arg & 0xF); 
   
-    vrambuf_put(NTADR_A(sx, sy+i), line, 8);
+      vrambuf_put(NTADR_A(sx, sy+i), line, 8);
     
-    if (i == 7) {
+      if (i == 7) {
     	ppu_wait_nmi();
       	vrambuf_clear();
+      }
     }
-  }
   
   ppu_wait_nmi();
   vrambuf_clear();
@@ -323,14 +324,58 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
 
 //void draw_blocks();
 //void draw_player_sprite(struct player_state *p);
-//void handle_player_input(struct player_state *p);
+
+void handle_player_input()
+{
+  for (i=0; i<2; i++) {
+    pad = pad_poll(i);
+    if (pad & PAD_LEFT) players[i].dx = -1;
+    else if (pad & PAD_RIGHT) players[i].dx = 1;
+    else players[i].dx=0;
+    
+    if (pad & PAD_UP) players[i].dy = -1;
+    else if (pad & PAD_DOWN) players[i].dy = 1;
+    else players[i].dy=0;
+  }
+}
 //void handle_enemies();
-//void maybe_cpu_tick();
+
+void handle_sprites()
+{
+  byte oam_id = 0;
+
+  // move applicable sprites
+  players[0].x += players[0].dx;
+  players[0].y += players[0].dy;
+  players[1].x += players[1].dx;
+  players[1].y += players[1].dy;
+  
+
+  // draw them
+  oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
+  oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+
+  if (oam_id!=0) oam_hide_rest(oam_id);
+}
+
+void maybe_cpu_tick()
+{
+  static byte frame_count;
+
+  if (frame_count > GAME_LOOPS_PER_TICK) {
+    cpu_tick(0);
+    cpu_tick(1);
+    draw_cpu_thread(1,  1, &cpu_threads[0]);
+    draw_cpu_thread(23, 1, &cpu_threads[1]);
+    frame_count = 0;
+  }
+  
+  frame_count++;
+}
 
 
 void game_loop(void) 
 {
-  byte frame_count = 0;
   byte oam_id = 0;
   byte i = 0;
   byte pad = 0;
@@ -352,47 +397,22 @@ void game_loop(void)
   
 
   while (1) 
-  {
-    	oam_id = 0;
-    	if (program_memory_updated) {
-           draw_mem(1,  9, &players[0]);
-           draw_mem(23, 9, &players[1]);
-           program_memory_updated = 0;
-        }
-    
-    	if (frame_count > GAME_LOOPS_PER_TICK) {
-          	cpu_tick(0);
-          	cpu_tick(1);
-    		draw_cpu_thread(1,  1, &cpu_threads[0]);
-          	draw_cpu_thread(23, 1, &cpu_threads[1]);
-          	frame_count = 0;
-        }
-    
-    
-        oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
-        oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+    {
+      oam_id = 0;
 
-    	players[0].x += players[0].dx;
-    	players[0].y += players[0].dy;
-    	players[1].x += players[1].dx;
-    	players[1].y += players[1].dy;
+      maybe_cpu_tick();
+      
+      if (program_memory_updated) {
+	draw_mem(1,  9, &players[0]);
+	draw_mem(23, 9, &players[1]);
+	program_memory_updated = 0;
+      }
 
-        for (i=0; i<2; i++) {
-     	  pad = pad_poll(i);
-	  if (pad & PAD_LEFT) players[i].dx = -1;
-          else if (pad & PAD_RIGHT) players[i].dx = 1;
-          else players[i].dx=0;
-          
-          if (pad & PAD_UP) players[i].dy = -1;
-          else if (pad & PAD_DOWN) players[i].dy = 1;
-          else players[i].dy=0;
-        }
-    
-        if (oam_id!=0) oam_hide_rest(oam_id);
-
-        frame_count++;
-    	ppu_wait_frame();
-  }
+      handle_player_input();
+      handle_sprites();
+     
+      ppu_wait_frame();
+    }
 }
 
 void main(void)
@@ -407,7 +427,7 @@ void main(void)
   while(1) {
     foo = get_random_byte(2);
     switch (game_state) 
-    {
+      {
       case GAME_STATE_INTRO:
         title_screen();
         game_state = GAME_STATE_GAME;
@@ -419,6 +439,6 @@ void main(void)
         gameover_screen();
         game_state = GAME_STATE_INTRO;
         break;
-    }
+      }
   }
 }
