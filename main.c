@@ -42,6 +42,8 @@ const char PALETTE[32] = {
 
 #define MEM_BYTES (BYTES_PER_INSTRUCTION * INSTRUCTIONS_PER_BLOCK * NUMBER_OF_BLOCKS)
 
+#define GAME_LOOPS_PER_TICK 8
+
 static unsigned char program_memory[MEM_BYTES];
 static unsigned char program_block_flags[NUMBER_OF_BLOCKS];
 
@@ -55,7 +57,8 @@ struct player_state {
   	unsigned char current_block;
   	unsigned int  score;
   
-  	byte x_pos, y_pos;
+  	byte x, y;
+  	sbyte dx, dy;
 };
 
 static struct player_state players[2];
@@ -67,7 +70,7 @@ static struct player_state players[2];
 static unsigned char game_state = 1;
 
 struct cpu_regs {
-  unsigned char a, b, x, y, pc;
+  unsigned char a, x, y, pc;
 };
 
 static struct cpu_regs cpu_threads[2];
@@ -105,6 +108,12 @@ void reset_memory()
   players[1].current_block = 4;
   players[0].score = players[1].score = 0;
   
+  players[0].x = players[0].y = 40;
+  players[1].x = players[1].y = 80;
+  
+  players[0].dx = players[0].dy = 0;
+  players[1].dx = players[1].dy = 0;
+  
   memfill(&cpu_threads[0], 0, sizeof(struct cpu_regs));
   memfill(&cpu_threads[1], 0, sizeof(struct cpu_regs));
 }
@@ -138,9 +147,11 @@ void cpu_tick(char thread)
 
   unsigned char pc_mod = 0;
   
+  
   switch (aop) {
   #define OPCODE_NOP 0
     case OPCODE_NOP:
+        t->a = get_random_byte(8);
       	break;
   #define OPCODE_LDA 1
     case OPCODE_LDA:
@@ -184,13 +195,9 @@ void cpu_tick(char thread)
         	t->pc += 2;
         }
         break;
-    default:
-        t->pc = 0;
   }
   
-  if (pc_mod == 0) {
-  	t->pc += 2;
-  }
+  if (pc_mod == 0) t->pc += 2;
 }
 
 
@@ -250,6 +257,8 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   byte owner = 0;
   static unsigned char line[8];
     
+  vrambuf_put(NTADR_A(sx, sy-1), "MEM------", 8);
+  
   for (i = 0; i < 16 ; i++) 
   {
     addr =   (p->current_block * 32) + (i * 2);
@@ -268,7 +277,7 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   
     vrambuf_put(NTADR_A(sx, sy+i), line, 8);
     
-    if (i == 8) {
+    if (i == 7) {
     	ppu_wait_nmi();
       	vrambuf_clear();
     }
@@ -276,6 +285,40 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   
   ppu_wait_nmi();
   vrambuf_clear();
+}
+
+void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
+{
+  static unsigned char line[8];
+  byte mem = program_memory[regs->pc & 0xFE];
+  
+  vrambuf_put(NTADR_A(sx, sy), "CPU------", 8);
+
+  line[0] = 'A';
+  line[1] = 1 + (regs->a >> 4);
+  line[2] = 1 + (regs->a & 0xF);
+  line[3] = 0;
+  line[4] = 'X';
+  line[5] = 1 + (regs->x >> 4);
+  line[6] = 1 + (regs->x & 0xF);
+  line[7] = 0;
+  
+  vrambuf_put(NTADR_A(sx, sy+1), line, sizeof(line));
+
+  line[0] = 'Y';
+  line[1] = 1 + (regs->y >> 4);
+  line[2] = 1 + (regs->y & 0xF);
+  line[3] = 0;
+  line[4] = 'P';
+  line[5] = 1 + (regs->pc >> 4);
+  line[6] = 1 + (regs->pc & 0xF);
+  line[7] = 0x11 + (mem >> 6);
+
+  vrambuf_put(NTADR_A(sx, sy+2), line, sizeof(line));
+
+  ppu_wait_nmi();
+  vrambuf_clear();
+  
 }
 
 //void draw_blocks();
@@ -287,6 +330,10 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
 
 void game_loop(void) 
 {
+  byte frame_count = 0;
+  byte oam_id = 0;
+  byte i = 0;
+  byte pad = 0;
   clrscr();
   
   reset_memory();
@@ -300,17 +347,51 @@ void game_loop(void)
   draw_mem(1,  9, &players[0]);
   draw_mem(23, 9, &players[1]);
 
+  draw_cpu_thread(1,  1, &cpu_threads[0]);
+  draw_cpu_thread(23, 1, &cpu_threads[1]);
+  
+
   while (1) 
   {
+    	oam_id = 0;
     	if (program_memory_updated) {
            draw_mem(1,  9, &players[0]);
            draw_mem(23, 9, &players[1]);
            program_memory_updated = 0;
         }
     
-        if (pad_trigger(0) & PAD_START) {
-            cpu_mem_write(3, 0, program_memory[0] + 1);
+    	if (frame_count > GAME_LOOPS_PER_TICK) {
+          	cpu_tick(0);
+          	cpu_tick(1);
+    		draw_cpu_thread(1,  1, &cpu_threads[0]);
+          	draw_cpu_thread(23, 1, &cpu_threads[1]);
+          	frame_count = 0;
         }
+    
+    
+        oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
+        oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+
+    	players[0].x += players[0].dx;
+    	players[0].y += players[0].dy;
+    	players[1].x += players[1].dx;
+    	players[1].y += players[1].dy;
+
+        for (i=0; i<2; i++) {
+     	  pad = pad_poll(i);
+	  if (pad & PAD_LEFT) players[i].dx = -1;
+          else if (pad & PAD_RIGHT) players[i].dx = 1;
+          else players[i].dx=0;
+          
+          if (pad & PAD_UP) players[i].dy = -1;
+          else if (pad & PAD_DOWN) players[i].dy = 1;
+          else players[i].dy=0;
+        }
+    
+        if (oam_id!=0) oam_hide_rest(oam_id);
+
+        frame_count++;
+    	ppu_wait_frame();
   }
 }
 
