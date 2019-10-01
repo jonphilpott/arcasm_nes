@@ -19,12 +19,13 @@
 //#link "vrambuf.c"
 
 
+
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] =
   { 
-   0x02,			// screen color
+   0x0F,			// screen color
    
-   0x2A,0x16,0x30,0x00,	// background palette 0
+   0x2A,0x27,0x30,0x00,	// background palette 0
    0x1C,0x20,0x2C,0x00,	// background palette 1
    0x00,0x10,0x20,0x00,	// background palette 2
    0x06,0x16,0x26,0x00,   // background palette 3
@@ -107,7 +108,7 @@ void reset_memory()
   players[0].state = players[1].state = PLAYER_STATE_PICK_BLOCK;
   players[0].current_block = 0;
   players[1].current_block = 4;
-  players[0].score = players[1].score = 0;
+  players[0].score = players[1].score = 0x0;
   
   players[0].x = players[0].y = 40;
   players[1].x = players[1].y = 80;
@@ -152,7 +153,6 @@ void cpu_tick(char thread)
   switch (aop) {
 #define OPCODE_NOP 0
   case OPCODE_NOP:
-    t->a = get_random_byte(8);
     break;
 #define OPCODE_LDA 1
   case OPCODE_LDA:
@@ -196,6 +196,23 @@ void cpu_tick(char thread)
       t->pc += 2;
     }
     break;
+#define OPCODE_RND 9
+  case OPCODE_RND:
+     t->a = get_random_byte(8);
+     break;
+#define OPCODE_TAP 10
+  case OPCODE_TAP:
+     t->pc = t->a;
+     pc_mod = 1;
+     break;
+#define OPCODE_RSH 11
+  case OPCODE_RSH:
+     t->a = (t->a >> arg);
+     break;
+#define OPCODE_LSH 12
+  case OPCODE_LSH:
+     t->a = (t->a << arg);
+     break;
   }
   
   if (pc_mod == 0) t->pc += 2;
@@ -257,9 +274,7 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   byte arg = 0;
   byte owner = 0;
   static unsigned char line[8];
-    
-  vrambuf_put(NTADR_A(sx, sy-1), "MEM------", 8);
-  
+      
   for (i = 0; i < 16 ; i++) 
     {
       addr =   (p->current_block * 32) + (i * 2);
@@ -279,12 +294,12 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
       vrambuf_put(NTADR_A(sx, sy+i), line, 8);
     
       if (i == 7) {
-    	ppu_wait_nmi();
+    	ppu_wait_frame();
       	vrambuf_clear();
       }
     }
   
-  ppu_wait_nmi();
+  ppu_wait_frame();
   vrambuf_clear();
 }
 
@@ -293,8 +308,6 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
   static unsigned char line[8];
   byte mem = program_memory[regs->pc & 0xFE];
   
-  vrambuf_put(NTADR_A(sx, sy), "CPU------", 8);
-
   line[0] = 'A';
   line[1] = 1 + (regs->a >> 4);
   line[2] = 1 + (regs->a & 0xF);
@@ -317,7 +330,7 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
 
   vrambuf_put(NTADR_A(sx, sy+2), line, sizeof(line));
 
-  ppu_wait_nmi();
+  ppu_wait_frame();
   vrambuf_clear();
   
 }
@@ -325,16 +338,18 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
 //void draw_blocks();
 //void draw_player_sprite(struct player_state *p);
 
+#define MOVEMENT_DELTA (2)
 void handle_player_input()
 {
+  byte i, pad;
   for (i=0; i<2; i++) {
     pad = pad_poll(i);
-    if (pad & PAD_LEFT) players[i].dx = -1;
-    else if (pad & PAD_RIGHT) players[i].dx = 1;
+    if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
+    else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
     else players[i].dx=0;
     
-    if (pad & PAD_UP) players[i].dy = -1;
-    else if (pad & PAD_DOWN) players[i].dy = 1;
+    if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
+    else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
     else players[i].dy=0;
   }
 }
@@ -365,21 +380,94 @@ void maybe_cpu_tick()
   if (frame_count > GAME_LOOPS_PER_TICK) {
     cpu_tick(0);
     cpu_tick(1);
-    draw_cpu_thread(1,  1, &cpu_threads[0]);
-    draw_cpu_thread(23, 1, &cpu_threads[1]);
+    draw_cpu_thread(1,  4, &cpu_threads[0]);
+    draw_cpu_thread(23, 4, &cpu_threads[1]);
     frame_count = 0;
   }
   
   frame_count++;
 }
 
+void draw_status(void)
+{
+  static char line[30];
+  static char line2[30];
+  
+  itoa(players[0].score, line, 16);
+  itoa(players[1].score, line2, 16);
+  
+  vrambuf_put(NTADR_A(19, 1), line, 10);
+  vrambuf_put(NTADR_A(19, 2), line2, 10);
+  
+  ppu_wait_frame();
+  vrambuf_clear();
+}
+
+const char bg_row[32] = {
+  0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 
+  0x8F, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x8f, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+};
+
+void draw_gameloop_bg()
+{
+  byte i, x, y;
+  ppu_off();
+  vram_adr(0x2000);
+  vram_fill(0, 960);
+  
+  vram_adr(NTADR_A(9, 1));
+  vram_write("P1 SCORE:", 9);
+  vram_adr(NTADR_A(9, 2));
+  vram_write("P2 SCORE:", 9);
+  
+  vram_adr(NTADR_A(1, 3));
+  vram_fill(0x8F, 30);
+  
+  for (i = 4; i < 28; i++) {
+    vram_adr(NTADR_A(0, i));
+    vram_write(bg_row, 31);
+  }
+  
+  vram_adr(NTADR_A(1, 4));
+  vram_write("CPU-----", 8);
+  
+  vram_adr(NTADR_A(23, 4));
+  vram_write("CPU-----", 8);
+  
+  vram_adr(NTADR_A(1, 7));
+  vram_write("MEM-----", 8);
+  
+  vram_adr(NTADR_A(23, 7));
+  vram_write("MEM-----", 8);
+  
+  vram_adr(NTADR_A(1, 24));
+  vram_write("OPCODE--", 8);
+  
+  vram_adr(NTADR_A(23, 24));
+  vram_write("OPCODE--", 8);
+  
+  vram_adr(NTADR_A(10, 4));
+  vram_write("-MEM BLOCKS-", 12);
+  
+  for (x = 0 ; x < 4 ; x++) {
+    for (y = 0; y < 4; y++) {
+       vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
+       vram_fill(1 + (y * 4) + x, 1);
+    }
+  }
+  
+  vram_adr(0x0);
+  ppu_on_all();
+}
 
 void game_loop(void) 
 {
   byte oam_id = 0;
-  byte i = 0;
-  byte pad = 0;
-  clrscr();
+
+  draw_gameloop_bg();
   
   reset_memory();
   
@@ -389,11 +477,11 @@ void game_loop(void)
   // set NMI handler
   set_vram_update(updbuf);
     
-  draw_mem(1,  9, &players[0]);
-  draw_mem(23, 9, &players[1]);
+  draw_mem(1,  8, &players[0]);
+  draw_mem(23, 8, &players[1]);
 
-  draw_cpu_thread(1,  1, &cpu_threads[0]);
-  draw_cpu_thread(23, 1, &cpu_threads[1]);
+  draw_cpu_thread(1,  4, &cpu_threads[0]);
+  draw_cpu_thread(23, 4, &cpu_threads[1]);
   
 
   while (1) 
@@ -403,13 +491,18 @@ void game_loop(void)
       maybe_cpu_tick();
       
       if (program_memory_updated) {
-	draw_mem(1,  9, &players[0]);
-	draw_mem(23, 9, &players[1]);
+	draw_mem(1,  8, &players[0]);
+	draw_mem(23, 8, &players[1]);
 	program_memory_updated = 0;
       }
 
       handle_player_input();
       handle_sprites();
+    
+      draw_status();
+    
+      players[0].score++;
+      players[1].score++;
      
       ppu_wait_frame();
     }
