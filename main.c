@@ -37,6 +37,7 @@ const char PALETTE[32] =
   };
 
 #define PLAYER_SCORE_MEM_WRITE (128)
+#define PLAYER_SCORE_CURSOR_DESTROY (64)
 
 #define BYTES_PER_INSTRUCTION	2
 #define INSTRUCTIONS_PER_BLOCK  8
@@ -407,6 +408,7 @@ void handle_player_input()
       if (players[i].x == players[opponent].x &&
           players[i].y == players[opponent].y &&
           players[opponent].state == PLAYER_STATE_ACTIVE) {
+        players[i].score += PLAYER_SCORE_CURSOR_DESTROY;
         players[opponent].state = PLAYER_STATE_BLOWNUP;
         players[opponent].count = get_random_byte(8);
       }
