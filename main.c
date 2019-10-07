@@ -38,6 +38,7 @@ const char PALETTE[32] =
 
 #define PLAYER_SCORE_MEM_WRITE (128)
 #define PLAYER_SCORE_CURSOR_DESTROY (64)
+#define PLAYER_SCORE_CURSOR_MEMEDIT (8)
 
 #define BYTES_PER_INSTRUCTION	2
 #define INSTRUCTIONS_PER_BLOCK  8
@@ -390,6 +391,10 @@ void handle_player_input()
 	  if ((i == 0 && x > 0x30) || (i == 1 && x > 0xe0)) {
           	addr++;
           }
+          
+          if (program_memory_meta[addr] != (1 + i)) {
+          	players[i].score += PLAYER_SCORE_CURSOR_MEMEDIT;
+          }
         
           if (pad & PAD_UP) {
           	program_memory[addr]++;
@@ -403,6 +408,8 @@ void handle_player_input()
           else if (pad & PAD_RIGHT) {
           	program_memory[addr] >>= 1;
           }
+          program_memory_meta[addr] = 1+i;
+
       }
       
       if (players[i].x == players[opponent].x &&
