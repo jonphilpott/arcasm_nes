@@ -55,12 +55,13 @@ static unsigned char program_memory_meta[MEM_BYTES];
 static byte program_memory_updated = 0;
 
 struct player_state {
-#define PLAYER_STATE_PICK_BLOCK 1
-#define PLAYER_STATE_PICK_BYTE  2
-#define PLAYER_STATE_ALTER_BYTE 3
+#define PLAYER_STATE_BLOWNUP 2
+#define PLAYER_STATE_ACTIVE 1
+#define PLAYER_STATE_INACTIVE 0
   unsigned char state;
   unsigned char current_block;
   unsigned int  score;
+  byte count;
   
   byte x, y;
   sbyte dx, dy;
@@ -109,7 +110,8 @@ void reset_memory()
   //memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
   memfill(program_memory_meta, 0, MEM_BYTES);
   
-  players[0].state = players[1].state = PLAYER_STATE_PICK_BLOCK;
+  players[0].state = 1;
+  players[1].state = 1;
   players[0].current_block = get_random_byte(4);
   players[1].current_block = get_random_byte(4);
   players[0].score = 0x0;
@@ -349,7 +351,11 @@ void handle_player_input()
   byte i, pad;
   byte x, y;
   byte mem_x_offset = 0;
+  byte opponent = 1;
   for (i=0; i<2; i++) {
+    if (players[i].state == PLAYER_STATE_ACTIVE) {
+    opponent = opponent - i;  
+      
     x = players[i].x;
     y = players[i].y;
     // neslib says check triggers first    
@@ -398,6 +404,13 @@ void handle_player_input()
           }
       }
       
+      if (players[i].x == players[opponent].x &&
+          players[i].y == players[opponent].y &&
+          players[opponent].state == PLAYER_STATE_ACTIVE) {
+        players[opponent].state = PLAYER_STATE_BLOWNUP;
+        players[opponent].count = get_random_byte(8);
+      }
+      
       program_memory_updated = 1;
     }
     else {
@@ -409,7 +422,7 @@ void handle_player_input()
     	else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
     	else players[i].dy=0;
     }
-
+    }
   }
 }
 //void handle_enemies();
@@ -426,8 +439,12 @@ void handle_sprites()
   
 
   // draw them
-  oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
-  oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+  if (players[0].state == 1) {
+	  oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
+  }
+  if (players[1].state == 1) {
+	  oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+  }
 
   if (oam_id!=0) oam_hide_rest(oam_id);
 }
@@ -531,7 +548,7 @@ void draw_gameloop_bg()
 
 void game_loop(void) 
 {
-  byte oam_id = 0;
+  byte t = 0;
 
   draw_gameloop_bg();
   
@@ -552,8 +569,6 @@ void game_loop(void)
 
   while (1) 
     {
-      oam_id = 0;
-
       maybe_cpu_tick();
       
       if (program_memory_updated) {
@@ -567,9 +582,15 @@ void game_loop(void)
     
       draw_status();
     
-      players[0].score++;
-      players[1].score++;
-     
+      for (t = 0; t < 2; t++) {
+      	if (players[t].state == PLAYER_STATE_BLOWNUP) {
+           players[t].count--;
+           if (players[t].count == 0) {
+           	players[t].state = PLAYER_STATE_ACTIVE;
+           }
+        }
+      }
+    
       ppu_wait_frame();
     }
 }
