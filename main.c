@@ -202,21 +202,21 @@ void cpu_tick(char thread)
     break;
 #define OPCODE_RND 9
   case OPCODE_RND:
-     t->a = get_random_byte(8);
-     break;
+    t->a = get_random_byte(8);
+    break;
 #define OPCODE_TAP 10
   case OPCODE_TAP:
-     t->pc = t->a;
-     pc_mod = 1;
-     break;
+    t->pc = t->a;
+    pc_mod = 1;
+    break;
 #define OPCODE_RSH 11
   case OPCODE_RSH:
-     t->a = (t->a >> arg);
-     break;
+    t->a = (t->a >> arg);
+    break;
 #define OPCODE_LSH 12
   case OPCODE_LSH:
-     t->a = (t->a << arg);
-     break;
+    t->a = (t->a << arg);
+    break;
   }
   
   if (pc_mod == 0) t->pc += 2;
@@ -377,32 +377,32 @@ void handle_player_input()
       
       if (BETWEEN(x, mem_x_offset + (3*8), 9*8) &&
           BETWEEN(y, 7*8, 24*8)) {
-      	  byte addr = (i == 0) ? 0 : 0x80;
+	byte addr = (i == 0) ? 0 : 0x80;
         
-          if (pad & PAD_UP) {
-          	program_memory[addr]++;
-          }
-          else if (pad & PAD_DOWN) {
-          	program_memory[addr]--;
-          }
-          else if (pad & PAD_LEFT) {
-          	program_memory[addr] <<= 1;
-          }
-          else if (pad & PAD_RIGHT) {
-          	program_memory[addr] >>= 1;
-          }
+	if (pad & PAD_UP) {
+	  program_memory[addr]++;
+	}
+	else if (pad & PAD_DOWN) {
+	  program_memory[addr]--;
+	}
+	else if (pad & PAD_LEFT) {
+	  program_memory[addr] <<= 1;
+	}
+	else if (pad & PAD_RIGHT) {
+	  program_memory[addr] >>= 1;
+	}
       }
       
       program_memory_updated = 1;
     }
     else {
-    	if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
-    	else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
-    	else players[i].dx=0;
+      if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
+      else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
+      else players[i].dx=0;
     
-    	if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
-    	else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
-    	else players[i].dy=0;
+      if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
+      else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
+      else players[i].dy=0;
     }
 
   }
@@ -459,11 +459,11 @@ void draw_status(void)
 }
 
 const char bg_row[32] = {
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-  0x8D, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-  0x8D, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+			 0x8D, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+			 0x8D, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
 };
 
 void draw_gameloop_bg()
@@ -515,8 +515,8 @@ void draw_gameloop_bg()
   
   for (x = 0 ; x < 4 ; x++) {
     for (y = 0; y < 4; y++) {
-       vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
-       vram_fill(1 + (y * 4) + x, 1);
+      vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
+      vram_fill(1 + (y * 4) + x, 1);
     }
   }
   
