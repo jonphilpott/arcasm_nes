@@ -363,7 +363,7 @@ void handle_player_input()
     // neslib says check triggers first    
     pad = pad_poll(i);
     
-    if (pad & PAD_A) {
+    if (pad & (PAD_A | PAD_B)) {
       // did they press on a CPU?
       if (BETWEEN(x, 0, 9*8) &&
           BETWEEN(y, 4*8, 7*8)) {
@@ -396,7 +396,10 @@ void handle_player_input()
           	players[i].score += PLAYER_SCORE_CURSOR_MEMEDIT;
           }
         
-          if (pad & PAD_UP) {
+          if (pad & PAD_B) {
+          	program_memory[addr] = 0;
+          }
+          else if (pad & PAD_UP) {
           	program_memory[addr]++;
           }
           else if (pad & PAD_DOWN) {
