@@ -39,7 +39,7 @@ const char PALETTE[32] =
 #define PLAYER_SCORE_MEM_WRITE (128)
 
 #define BYTES_PER_INSTRUCTION	2
-#define INSTRUCTIONS_PER_BLOCK  16
+#define INSTRUCTIONS_PER_BLOCK  8
 #define BYTES_PER_BLOCK         (INSTRUCTIONS_PER_BLOCK * BYTES_PER_INSTRUCTION)
 #define NUMBER_OF_BLOCKS        16
 
@@ -107,13 +107,13 @@ void reset_memory()
 {
   memfill(program_memory, 0, MEM_BYTES);
   //memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
-  memfill(program_memory_meta, 3, MEM_BYTES);
+  memfill(program_memory_meta, 0, MEM_BYTES);
   
   players[0].state = players[1].state = PLAYER_STATE_PICK_BLOCK;
-  players[0].current_block = 0;
-  players[1].current_block = 4;
+  players[0].current_block = get_random_byte(4);
+  players[1].current_block = get_random_byte(4);
   players[0].score = 0x0;
-  players[1].score = 0x42;
+  players[1].score = 0x0;
   
   players[0].x = players[0].y = 40;
   players[1].x = players[1].y = 80;
@@ -202,21 +202,21 @@ void cpu_tick(char thread)
     break;
 #define OPCODE_RND 9
   case OPCODE_RND:
-    t->a = get_random_byte(8);
-    break;
+     t->a = get_random_byte(8);
+     break;
 #define OPCODE_TAP 10
   case OPCODE_TAP:
-    t->pc = t->a;
-    pc_mod = 1;
-    break;
+     t->pc = t->a;
+     pc_mod = 1;
+     break;
 #define OPCODE_RSH 11
   case OPCODE_RSH:
-    t->a = (t->a >> arg);
-    break;
+     t->a = (t->a >> arg);
+     break;
 #define OPCODE_LSH 12
   case OPCODE_LSH:
-    t->a = (t->a << arg);
-    break;
+     t->a = (t->a << arg);
+     break;
   }
   
   if (pc_mod == 0) t->pc += 2;
@@ -281,9 +281,9 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
   byte arg = 0;
   byte owner = 0;
       
-  for (i = 0; i < 16 ; i++) 
+  for (i = 0; i < INSTRUCTIONS_PER_BLOCK * 2 ; i++) 
     {
-      addr =   (p->current_block * 32) + (i * 2);
+      addr =   (p->current_block * BYTES_PER_BLOCK) + (i * 2);
       opcode = program_memory[addr];
       arg    = program_memory[(addr + 1) & 0xFF];
       owner  = program_memory_meta[addr];
@@ -310,9 +310,7 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
 }
 
 void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
-{
-  byte mem = program_memory[regs->pc & 0xFE];
-  
+{  
   C_BUF[0] = 'A';
   C_BUF[1] = 1 + (regs->a >> 4);
   C_BUF[2] = 1 + (regs->a & 0xF);
@@ -331,7 +329,7 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
   C_BUF[4] = 'P';
   C_BUF[5] = 1 + (regs->pc >> 4);
   C_BUF[6] = 1 + (regs->pc & 0xF);
-  C_BUF[7] = 0x11 + (mem >> 6);
+  C_BUF[7] = 0x11 + (program_memory_meta[regs->pc & 0xFE]);
 
   vrambuf_put(NTADR_A(sx, sy+2), C_BUF, 8);
 
@@ -375,34 +373,41 @@ void handle_player_input()
       	mem_x_offset = 23;
       }
       
-      if (BETWEEN(x, mem_x_offset + (3*8), 9*8) &&
+      if (BETWEEN(x, ((3 + mem_x_offset) *8), (9 + mem_x_offset) * 8) &&
           BETWEEN(y, 7*8, 24*8)) {
-	byte addr = (i == 0) ? 0 : 0x80;
+      	  byte addr = players[i].current_block * BYTES_PER_BLOCK;
         
-	if (pad & PAD_UP) {
-	  program_memory[addr]++;
-	}
-	else if (pad & PAD_DOWN) {
-	  program_memory[addr]--;
-	}
-	else if (pad & PAD_LEFT) {
-	  program_memory[addr] <<= 1;
-	}
-	else if (pad & PAD_RIGHT) {
-	  program_memory[addr] >>= 1;
-	}
+          // find the row
+          addr = addr + (((y - (8 * 8)) / 8) * 2);
+          
+	  if ((i == 0 && x > 0x30) || (i == 1 && x > 0xe0)) {
+          	addr++;
+          }
+        
+          if (pad & PAD_UP) {
+          	program_memory[addr]++;
+          }
+          else if (pad & PAD_DOWN) {
+          	program_memory[addr]--;
+          }
+          else if (pad & PAD_LEFT) {
+          	program_memory[addr] <<= 1;
+          }
+          else if (pad & PAD_RIGHT) {
+          	program_memory[addr] >>= 1;
+          }
       }
       
       program_memory_updated = 1;
     }
     else {
-      if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
-      else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
-      else players[i].dx=0;
+    	if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
+    	else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
+    	else players[i].dx=0;
     
-      if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
-      else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
-      else players[i].dy=0;
+    	if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
+    	else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
+    	else players[i].dy=0;
     }
 
   }
@@ -459,11 +464,11 @@ void draw_status(void)
 }
 
 const char bg_row[32] = {
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x8D, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  0x8D, 
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
 };
 
 void draw_gameloop_bg()
@@ -515,8 +520,8 @@ void draw_gameloop_bg()
   
   for (x = 0 ; x < 4 ; x++) {
     for (y = 0; y < 4; y++) {
-      vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
-      vram_fill(1 + (y * 4) + x, 1);
+       vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
+       vram_fill(1 + (y * 4) + x, 1);
     }
   }
   
