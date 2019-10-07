@@ -18,6 +18,8 @@
 #include "vrambuf.h"
 //#link "vrambuf.c"
 
+#include "apu.h"
+//#link "apu.c"
 
 
 /*{pal:"nes",layout:"nes"}*/
@@ -47,7 +49,6 @@ const char PALETTE[32] =
 
 #define MEM_BYTES (BYTES_PER_INSTRUCTION * INSTRUCTIONS_PER_BLOCK * NUMBER_OF_BLOCKS)
 
-#define GAME_LOOPS_PER_TICK 8
 
 static unsigned char program_memory[MEM_BYTES];
 static unsigned char program_memory_meta[MEM_BYTES];
@@ -227,6 +228,39 @@ void cpu_tick(char thread)
 }
 
 
+/// SOUND EFFECTS
+void sfx_cpu_tick()
+{
+    APU_NOISE_DECAY(0, 1, 1);
+}
+
+void sfx_cursor_destroy()
+{
+    APU_PULSE_DECAY(0, 512, DUTY_12, 2, 50);
+}
+
+void sfx_value_change()
+{
+    APU_PULSE_DECAY(0, 256, DUTY_25, 2, 25);
+}
+
+
+
+
+// muzakery
+void __fastcall__ play_music(void)
+{
+   static const int note_table_49[64] = {
+   4304, 4062, 3834, 3619, 3416, 3224, 3043, 2872, 2711, 2559, 2415, 2279, 2151, 2031, 1917, 1809, 1707, 1611, 1521, 1436, 1355, 1279, 1207, 1139, 1075, 1015, 958, 904, 853, 805, 760, 717, 677, 639, 603, 569, 537, 507, 478, 451, 426, 402, 379, 358, 338, 319, 301, 284, 268, 253, 239, 225, 213, 201, 189, 179, 168, 159, 150, 142, 134, 126, 119, 112, };
+  
+   static byte m_ptr = 0;
+   static byte m_delay = 0;
+  
+   if (m_delay++ > 8) {
+     APU_PULSE_DECAY(1, note_table_49[m_ptr++ % 0x8], DUTY_25, 2, 10);
+     m_delay = 0;
+   }
+}
 
 void clrscr()
 {
@@ -391,36 +425,48 @@ void handle_player_input()
 	  if ((i == 0 && x > 0x30) || (i == 1 && x > 0xe0)) {
           	addr++;
           }
-          
-          if (program_memory_meta[addr] != (1 + i)) {
-          	players[i].score += PLAYER_SCORE_CURSOR_MEMEDIT;
-          }
-        
+                  
           if (pad & PAD_B) {
           	program_memory[addr] = 0;
           }
-          else if (pad & PAD_UP) {
+          else {
+                if (program_memory_meta[addr] != (1 + i)) {
+          	players[i].score += PLAYER_SCORE_CURSOR_MEMEDIT;
+                }
+                      program_memory_meta[addr] = 1+i;
+
+       	  if (pad & PAD_UP) {
           	program_memory[addr]++;
+                        sfx_value_change();
+
           }
           else if (pad & PAD_DOWN) {
           	program_memory[addr]--;
+                        sfx_value_change();
+
           }
           else if (pad & PAD_LEFT) {
           	program_memory[addr] <<= 1;
+                        sfx_value_change();
+
           }
           else if (pad & PAD_RIGHT) {
           	program_memory[addr] >>= 1;
+                        sfx_value_change();
+
           }
-          program_memory_meta[addr] = 1+i;
+          }
 
       }
       
-      if (players[i].x == players[opponent].x &&
+      if (pad & PAD_B &&
+          players[i].x == players[opponent].x &&
           players[i].y == players[opponent].y &&
           players[opponent].state == PLAYER_STATE_ACTIVE) {
         players[i].score += PLAYER_SCORE_CURSOR_DESTROY;
         players[opponent].state = PLAYER_STATE_BLOWNUP;
         players[opponent].count = get_random_byte(8);
+        sfx_cursor_destroy();
       }
       
       program_memory_updated = 1;
@@ -461,17 +507,27 @@ void handle_sprites()
   if (oam_id!=0) oam_hide_rest(oam_id);
 }
 
-void maybe_cpu_tick()
+#define GAME_LOOPS_PER_TICK 64
+
+static byte redraw_cpu = 0;
+
+void __fastcall__ maybe_cpu_tick(void)
 {
   static byte frame_count;
-
-  if (frame_count > GAME_LOOPS_PER_TICK) {
-    cpu_tick(0);
-    cpu_tick(1);
-    draw_cpu_thread(1,  4, &cpu_threads[0]);
-    draw_cpu_thread(23, 4, &cpu_threads[1]);
-    frame_count = 0;
+  
+  if (game_state != 1) {
+  	return;
   }
+    
+  if (frame_count > GAME_LOOPS_PER_TICK) {
+      sfx_cpu_tick();
+      cpu_tick(0);
+      cpu_tick(1);
+      frame_count = 0;
+      redraw_cpu = 1;
+  }
+  
+  play_music();
   
   frame_count++;
 }
@@ -571,6 +627,9 @@ void game_loop(void)
   
   // set NMI handler
   set_vram_update(updbuf);
+  
+  // tick in NMI as well
+  nmi_set_callback(maybe_cpu_tick);
     
   draw_mem(1,  8, &players[0]);
   draw_mem(23, 8, &players[1]);
@@ -581,7 +640,11 @@ void game_loop(void)
 
   while (1) 
     {
-      maybe_cpu_tick();
+      if (redraw_cpu) {
+        redraw_cpu = 0;
+        draw_cpu_thread(1,  4, &cpu_threads[0]);
+        draw_cpu_thread(23, 4, &cpu_threads[1]);
+      }
       
       if (program_memory_updated) {
 	draw_mem(1,  8, &players[0]);
@@ -603,6 +666,7 @@ void game_loop(void)
         }
       }
     
+      APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
       ppu_wait_frame();
     }
 }
@@ -614,6 +678,8 @@ void main(void)
   setup_graphics();
 
   ppu_on_all(); 
+  
+  apu_init();
   
   // main loop
   while(1) {
