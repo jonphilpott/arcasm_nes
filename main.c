@@ -51,9 +51,9 @@ const char PALETTE[32] =
 #define MEM_BYTES (BYTES_PER_INSTRUCTION * INSTRUCTIONS_PER_BLOCK * NUMBER_OF_BLOCKS)
 
 
-static unsigned char program_memory[MEM_BYTES];
-static unsigned char program_memory_meta[MEM_BYTES];
-//static unsigned char program_block_flags[NUMBER_OF_BLOCKS];
+static byte program_memory[MEM_BYTES];
+static byte program_memory_meta[MEM_BYTES];
+//static byte program_block_flags[NUMBER_OF_BLOCKS];
 
 
 static byte program_memory_updated = 0;
@@ -62,8 +62,8 @@ struct player_state {
 #define PLAYER_STATE_BLOWNUP 2
 #define PLAYER_STATE_ACTIVE 1
 #define PLAYER_STATE_INACTIVE 0
-  unsigned char state;
-  unsigned char current_block;
+  byte state;
+  byte current_block;
   unsigned int  score;
   byte count;
   
@@ -89,20 +89,20 @@ static struct player_state players[2];
 #define GAME_STATE_GAME     1
 #define GAME_STATE_GAMEOVER 2
 
-static unsigned char game_state = 1;
+static byte game_state = 1;
 
 struct cpu_regs {
-  unsigned char a, x, y, pc;
-  unsigned char prev_owner;
+  byte a, x, y, pc;
+  byte prev_owner;
 };
 
 static struct cpu_regs cpu_threads[2];
 
-static unsigned char lfsr = 0x55;
+static byte lfsr = 0x55;
 
-unsigned char get_random_byte(unsigned char rounds)
+byte get_random_byte(byte rounds)
 { 
-  unsigned char out;
+  byte out;
   while (rounds--) {
     lfsr = (lfsr >> 1) | 
       ((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
@@ -186,15 +186,15 @@ void reset_memory()
   cpu_threads[1].pc = players[1].current_block * BYTES_PER_BLOCK;
   
   for (i = 0 ; i < MAX_ENEMIES; i++) {
-  	enemies[i].dx = (i & 1) ? 1 : -1;
-    	enemies[i].dy = (i & 1) ? 2 : -1;
-        enemies[i].x = get_random_byte(8);
-        enemies[i].y = get_random_byte(8);
-        enemies[i].state = 1;
+    enemies[i].dx = (i & 1) ? 1 : -1;
+    enemies[i].dy = (i & 1) ? 2 : -1;
+    enemies[i].x = get_random_byte(8);
+    enemies[i].y = get_random_byte(8);
+    enemies[i].state = 1;
   }
 }
 
-void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
+void cpu_mem_write(byte own, byte addr, byte val)
 {
   if (own != 3) 
     score_up(own-1, PLAYER_SCORE_MEM_WRITE);
@@ -209,11 +209,11 @@ void cpu_tick(byte thread)
 {
   struct cpu_regs *t = &cpu_threads[thread];
   // shave off 1 bit, PC accesses should always be even (nice try)
-  unsigned char pc     = t->pc &  0xFE;
-  unsigned char opcode = program_memory[pc];
-  unsigned char arg    = program_memory[pc + 1];
-  unsigned char owner  = program_memory_meta[pc];
-  unsigned char pc_mod = 0;
+  byte pc     = t->pc &  0xFE;
+  byte opcode = program_memory[pc];
+  byte arg    = program_memory[pc + 1];
+  byte owner  = program_memory_meta[pc];
+  byte pc_mod = 0;
   
   if (t->prev_owner != owner) {
     score_up(owner-1, PLAYER_SCORE_CPU_TAKEOVER);
@@ -316,7 +316,8 @@ void cpu_tick(byte thread)
 // muzakery
 void __fastcall__ play_music(void)
 {
-  static const int note_table_49[64] = {
+  static const int note_table_49[64] =
+    {
      4304, 4062, 3834, 3619, 
      3416, 3224, 3043, 2872, 
      2711, 2559, 2415, 2279, 
@@ -333,7 +334,7 @@ void __fastcall__ play_music(void)
      213, 201, 189, 179, 
      168, 159, 150, 142, 
      134, 126, 119, 112, 
-  };
+    };
   
   static byte m_ptr = 0;
   static byte m_delay = 0;
@@ -361,8 +362,8 @@ void clrscr()
 
 void title_screen(void)
 {
-  unsigned char by1 = 0;
-  unsigned char by2 = 0;
+  byte by1 = 0;
+  byte by2 = 0;
   clrscr();
   
   vram_adr(NTADR_A(9,12));
@@ -396,7 +397,7 @@ void gameover_screen(void)
 
 
 // draw functions use this temporarily
-static unsigned char C_BUF[10];
+static byte C_BUF[10];
 
 
 void draw_mem(byte sx, byte sy, struct player_state *p)
@@ -601,9 +602,9 @@ void handle_sprites()
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
     if (enemies[i].state == 1) {
-    	enemies[i].x += enemies[i].dx;
-    	enemies[i].y += enemies[i].dy;
-    	oam_id = oam_spr(enemies[i].x, enemies[i].y, 0x17 + i, 3, oam_id);
+      enemies[i].x += enemies[i].dx;
+      enemies[i].y += enemies[i].dy;
+      oam_id = oam_spr(enemies[i].x, enemies[i].y, 0x17 + i, 3, oam_id);
     }
   }
   
@@ -743,23 +744,23 @@ void handle_enemies()
   struct enemy *e;
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
-  	e = &enemies[i];
+    e = &enemies[i];
     	
-    	if (e->state == 1) {
-        	if (e->x < 0x4d) {
-                  e->dx = i+1;
-                }
-                else if (e->x > 0xa9) {
-                  e->dx = -1;
-                }
+    if (e->state == 1) {
+      if (e->x < 0x4d) {
+	e->dx = i+1;
+      }
+      else if (e->x > 0xa9) {
+	e->dx = -1;
+      }
           
-                if (e->y < 29) {
-                  e->dy = i+1;
-                }
-                else if (e->y > 210) {
-                  e->dy = -1;
-                }
-        }
+      if (e->y < 29) {
+	e->dy = i+1;
+      }
+      else if (e->y > 210) {
+	e->dy = -1;
+      }
+    }
   }
 }
 
@@ -825,7 +826,7 @@ void game_loop(void)
 
 void main(void)
 {  
-  unsigned char foo = 0;
+  byte foo = 0;
 
   setup_graphics();
 
