@@ -162,6 +162,7 @@ void cpu_tick(char thread)
   switch (opcode) {
 #define OPCODE_NOP 0
   case OPCODE_NOP:
+    t->a = get_random_byte(8);
     break;
 #define OPCODE_LDA 1
   case OPCODE_LDA:
@@ -229,13 +230,19 @@ void cpu_tick(char thread)
 
 
 /// SOUND EFFECTS
-void sfx_cpu_tick()
+void sfx_cpu_tick_snare()
 {
-    APU_NOISE_DECAY(0, 1, 1);
+    APU_NOISE_DECAY(10, 4, 4);
+}
+
+void sfx_cpu_tick_kick()
+{
+    APU_NOISE_DECAY(100, 0, 0);
 }
 
 void sfx_cursor_destroy()
 {
+    APU_NOISE_DECAY(10, 40, 60);
     APU_PULSE_DECAY(0, 512, DUTY_12, 2, 50);
 }
 
@@ -256,10 +263,8 @@ void __fastcall__ play_music(void)
    static byte m_ptr = 0;
    static byte m_delay = 0;
   
-   if (m_delay++ > 8) {
      APU_PULSE_DECAY(1, note_table_49[m_ptr++ % 0x8], DUTY_25, 2, 10);
-     m_delay = 0;
-   }
+     //APU_TRIANGLE_LENGTH(note_table_49[m_ptr++ % 0x8] * 8, 10);
 }
 
 void clrscr()
@@ -326,6 +331,11 @@ void draw_mem(byte sx, byte sy, struct player_state *p)
       arg    = program_memory[(addr + 1) & 0xFF];
       owner  = program_memory_meta[addr];
     
+      if (cpu_threads[0].pc == addr || cpu_threads[1].pc == addr) {
+      	owner = 4;
+      }
+   
+    
       C_BUF[0] = 1 + (addr >> 4);
       C_BUF[1] = 1 + (addr & 0xF);
       C_BUF[2] = 0x11 + owner;
@@ -381,7 +391,7 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
 
 #define BETWEEN(var, min, max) ((var) > (min) && (var) < (max))
 
-#define MOVEMENT_DELTA (2)
+#define MOVEMENT_DELTA (1)
 void handle_player_input()
 {
   byte i, pad;
@@ -398,15 +408,19 @@ void handle_player_input()
     pad = pad_poll(i);
     
     if (pad & (PAD_A | PAD_B)) {
+      // add some entry to the LFSR.
+      
+      lfsr = lfsr | 1;
+      
       // did they press on a CPU?
       if (BETWEEN(x, 0, 9*8) &&
           BETWEEN(y, 4*8, 7*8)) {
-        players[i].current_block = cpu_threads[0].pc >> 5;
+        players[i].current_block = cpu_threads[0].pc >> 4;
       } 
       
       if (BETWEEN(x, 23*8, 31*8) &&
           BETWEEN(y, 4*8, 7*8)) {
-        players[i].current_block = cpu_threads[1].pc >> 5;
+        players[i].current_block = cpu_threads[1].pc >> 4;
       } 
       
       // for editing memory, each player can only modify their side
@@ -456,12 +470,20 @@ void handle_player_input()
 
           }
           }
-
+        
+   
+      }
+      
+      if (BETWEEN(x, 0x56, 0xB2) &&
+          BETWEEN(y, 0x2E, 0x8F)) {
+            players[i].current_block = 
+              ((y - 0x2E) / 24) * 4 + 
+              ((x - 0x56) / 24);
       }
       
       if (pad & PAD_B &&
-          players[i].x == players[opponent].x &&
-          players[i].y == players[opponent].y &&
+          (players[i].x - players[opponent].x) < 9 &&
+          (players[i].y - players[opponent].y) < 9 &&
           players[opponent].state == PLAYER_STATE_ACTIVE) {
         players[i].score += PLAYER_SCORE_CURSOR_DESTROY;
         players[opponent].state = PLAYER_STATE_BLOWNUP;
@@ -507,27 +529,39 @@ void handle_sprites()
   if (oam_id!=0) oam_hide_rest(oam_id);
 }
 
-#define GAME_LOOPS_PER_TICK 64
+#define GAME_LOOPS_PER_TICK 48
 
 static byte redraw_cpu = 0;
 
 void __fastcall__ maybe_cpu_tick(void)
 {
   static byte frame_count;
+  static byte flip_flop;
   
+  handle_sprites();
+
   if (game_state != 1) {
   	return;
   }
+  
+  if (frame_count == GAME_LOOPS_PER_TICK/2) {
+     play_music();
+  }
     
   if (frame_count > GAME_LOOPS_PER_TICK) {
-      sfx_cpu_tick();
-      cpu_tick(0);
-      cpu_tick(1);
+      if ((flip_flop++ & 1) == 1) {
+      	cpu_tick(0);
+        sfx_cpu_tick_kick();
+      }
+      else {
+      	cpu_tick(1);
+        sfx_cpu_tick_snare();
+      }
       frame_count = 0;
       redraw_cpu = 1;
+      play_music();
   }
   
-  play_music();
   
   frame_count++;
 }
@@ -644,6 +678,9 @@ void game_loop(void)
         redraw_cpu = 0;
         draw_cpu_thread(1,  4, &cpu_threads[0]);
         draw_cpu_thread(23, 4, &cpu_threads[1]);
+        draw_mem(1,  8, &players[0]);
+	draw_mem(23, 8, &players[1]);
+	program_memory_updated = 0;
       }
       
       if (program_memory_updated) {
@@ -653,7 +690,6 @@ void game_loop(void)
       }
 
       handle_player_input();
-      handle_sprites();
     
       draw_status();
     
