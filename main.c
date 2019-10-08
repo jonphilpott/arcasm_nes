@@ -89,7 +89,7 @@ static struct player_state players[2];
 #define GAME_STATE_GAME     1
 #define GAME_STATE_GAMEOVER 2
 
-static unsigned char game_state = 0;
+static unsigned char game_state = 1;
 
 struct cpu_regs {
   unsigned char a, x, y, pc;
@@ -161,6 +161,7 @@ void setup_graphics() {
 
 void reset_memory()
 {
+  byte i;
   memfill(program_memory, 0, MEM_BYTES);
   //memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
   memfill(program_memory_meta, 0, MEM_BYTES);
@@ -183,6 +184,14 @@ void reset_memory()
   
   cpu_threads[0].pc = players[0].current_block * BYTES_PER_BLOCK;
   cpu_threads[1].pc = players[1].current_block * BYTES_PER_BLOCK;
+  
+  for (i = 0 ; i < MAX_ENEMIES; i++) {
+  	enemies[i].dx = (i & 1) ? 1 : -1;
+    	enemies[i].dy = (i & 1) ? 2 : -1;
+        enemies[i].x = get_random_byte(8);
+        enemies[i].y = get_random_byte(8);
+        enemies[i].state = 1;
+  }
 }
 
 void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
@@ -308,16 +317,34 @@ void cpu_tick(byte thread)
 void __fastcall__ play_music(void)
 {
   static const int note_table_49[64] = {
-					4304, 4062, 3834, 3619, 3416, 3224, 3043, 2872, 2711, 2559, 2415, 2279, 2151, 2031, 1917, 1809, 1707, 1611, 1521, 1436, 1355, 1279, 1207, 1139, 1075, 1015, 958, 904, 853, 805, 760, 717, 677, 639, 603, 569, 537, 507, 478, 451, 426, 402, 379, 358, 338, 319, 301, 284, 268, 253, 239, 225, 213, 201, 189, 179, 168, 159, 150, 142, 134, 126, 119, 112, };
+     4304, 4062, 3834, 3619, 
+     3416, 3224, 3043, 2872, 
+     2711, 2559, 2415, 2279, 
+     2151, 2031, 1917, 1809, 
+     1707, 1611, 1521, 1436, 
+     1355, 1279, 1207, 1139, 
+     1075, 1015, 958, 904, 
+     853, 805, 760, 717, 
+     677, 639, 603, 569, 
+     537, 507, 478, 451, 
+     426, 402, 379, 358, 
+     338, 319, 301, 284, 
+     268, 253, 239, 225, 
+     213, 201, 189, 179, 
+     168, 159, 150, 142, 
+     134, 126, 119, 112, 
+  };
   
   static byte m_ptr = 0;
   static byte m_delay = 0;
   
-  if ((m_ptr & 1) == 1) {
-    APU_PULSE_DECAY(1, note_table_49[m_ptr % 0x8], DUTY_25, 5, 8);
+  int note = note_table_49[get_random_byte(5)];
+  
+  if (note < 800) {
+    APU_PULSE_DECAY(1, note, DUTY_25, 5, 8);
   }
   else {
-    APU_TRIANGLE_LENGTH(note_table_49[m_ptr % 0x8] / 8, 1);
+    APU_TRIANGLE_LENGTH(note, 1);
   }
   
   m_ptr++;
@@ -525,8 +552,6 @@ void handle_player_input()
 
 	    }
           }
-        
-   
 	}
       
 	if (BETWEEN(x, 0x56, 0xB2) &&
@@ -566,6 +591,7 @@ void handle_player_input()
 void handle_sprites()
 {
   byte oam_id = 0;
+  byte i; 
 
   // move applicable sprites
   players[0].x += players[0].dx;
@@ -573,7 +599,14 @@ void handle_sprites()
   players[1].x += players[1].dx;
   players[1].y += players[1].dy;
   
-
+  for (i = 0 ; i < MAX_ENEMIES ; i++) {
+    if (enemies[i].state == 1) {
+    	enemies[i].x += enemies[i].dx;
+    	enemies[i].y += enemies[i].dy;
+    	oam_id = oam_spr(enemies[i].x, enemies[i].y, 0x17 + i, 3, oam_id);
+    }
+  }
+  
   // draw them
   if (players[0].state == 1) {
     oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
@@ -704,6 +737,32 @@ void draw_gameloop_bg()
   ppu_on_all();
 }
 
+void handle_enemies()
+{
+  byte i;
+  struct enemy *e;
+  
+  for (i = 0 ; i < MAX_ENEMIES ; i++) {
+  	e = &enemies[i];
+    	
+    	if (e->state == 1) {
+        	if (e->x < 0x4d) {
+                  e->dx = i+1;
+                }
+                else if (e->x > 0xa9) {
+                  e->dx = -1;
+                }
+          
+                if (e->y < 29) {
+                  e->dy = i+1;
+                }
+                else if (e->y > 210) {
+                  e->dy = -1;
+                }
+        }
+  }
+}
+
 void game_loop(void) 
 {
   byte t = 0;
@@ -746,6 +805,7 @@ void game_loop(void)
       }
 
       handle_player_input();
+      handle_enemies();
     
       draw_status();
     
