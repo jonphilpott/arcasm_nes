@@ -70,13 +70,25 @@ struct player_state {
   sbyte dx, dy;
 };
 
+struct enemy {
+  byte state;
+  byte type;
+  
+  
+  byte x, y;
+  sbyte dx, dy;
+};
+
+#define MAX_ENEMIES (4)
+struct enemy enemies[MAX_ENEMIES];
+
 static struct player_state players[2];
 
 #define GAME_STATE_INTRO    0
 #define GAME_STATE_GAME     1
 #define GAME_STATE_GAMEOVER 2
 
-static unsigned char game_state = 1;
+static unsigned char game_state = 0;
 
 struct cpu_regs {
   unsigned char a, x, y, pc;
@@ -136,7 +148,7 @@ void reset_memory()
 void cpu_mem_write(unsigned char own, unsigned char addr, unsigned char val)
 {
   if (own != 3) 
-    players[own].score += PLAYER_SCORE_MEM_WRITE;
+    players[own-1].score += PLAYER_SCORE_MEM_WRITE;
   
   
   program_memory[addr] = val;
@@ -162,7 +174,6 @@ void cpu_tick(char thread)
   switch (opcode) {
 #define OPCODE_NOP 0
   case OPCODE_NOP:
-    t->a = get_random_byte(8);
     break;
 #define OPCODE_LDA 1
   case OPCODE_LDA:
@@ -210,22 +221,43 @@ void cpu_tick(char thread)
   case OPCODE_RND:
      t->a = get_random_byte(8);
      break;
-#define OPCODE_TAP 10
+#define OPCODE_TAP 0xA
   case OPCODE_TAP:
      t->pc = t->a;
      pc_mod = 1;
      break;
-#define OPCODE_RSH 11
+#define OPCODE_RSH 0xB
   case OPCODE_RSH:
      t->a = (t->a >> arg);
      break;
-#define OPCODE_LSH 12
+#define OPCODE_LSH 0xC
   case OPCODE_LSH:
      t->a = (t->a << arg);
      break;
+#define OPCODE_INCA 0xD
+       case OPCODE_INCA:
+      t->a = (t->a + arg);
+      break;
+#define OPCODE_TAX 0xE
+    case OPCODE_TAX:
+      t->x = t->a;
+      break;
+#define OPCODE_TAY 0xF
+    case OPCODE_TAY:
+      t->y = t->a;
+      break;
+#define OPCODE_STAX 0x10
+    case OPCODE_STAX:
+      cpu_mem_write(owner, t->x, t->a);
+      break;
   }
-  
-  if (pc_mod == 0) t->pc += 2;
+  if (pc_mod == 0) {
+    t->pc += 2;
+  }
+  else {
+    // don't allow PCs to go to odd addresses;
+    t->pc = t->pc & 0xFE;
+  }
 }
 
 
@@ -251,7 +283,10 @@ void sfx_value_change()
     APU_PULSE_DECAY(0, 256, DUTY_25, 2, 25);
 }
 
-
+void sfx_select() 
+{
+    APU_PULSE_DECAY(0, 128, DUTY_50, 2, 12);
+}
 
 
 // muzakery
@@ -263,8 +298,14 @@ void __fastcall__ play_music(void)
    static byte m_ptr = 0;
    static byte m_delay = 0;
   
-     APU_PULSE_DECAY(1, note_table_49[m_ptr++ % 0x8], DUTY_25, 2, 10);
-     //APU_TRIANGLE_LENGTH(note_table_49[m_ptr++ % 0x8] * 8, 10);
+   if ((m_ptr & 1) == 1) {
+     APU_PULSE_DECAY(1, note_table_49[m_ptr % 0x8], DUTY_25, 5, 8);
+   }
+   else {
+     APU_TRIANGLE_LENGTH(note_table_49[m_ptr % 0x8] / 8, 1);
+   }
+  
+  m_ptr++;
 }
 
 void clrscr()
@@ -479,6 +520,7 @@ void handle_player_input()
             players[i].current_block = 
               ((y - 0x2E) / 24) * 4 + 
               ((x - 0x56) / 24);
+            sfx_select();
       }
       
       if (pad & PAD_B &&
