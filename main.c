@@ -115,28 +115,28 @@ unsigned char get_random_byte(unsigned char rounds)
 /// SOUND EFFECTS
 void sfx_cpu_tick_snare()
 {
-    APU_NOISE_DECAY(10, 4, 4);
+  APU_NOISE_DECAY(10, 4, 4);
 }
 
 void sfx_cpu_tick_kick()
 {
-    APU_NOISE_DECAY(100, 0, 0);
+  APU_NOISE_DECAY(100, 0, 0);
 }
 
 void sfx_cursor_destroy()
 {
-    APU_NOISE_DECAY(10, 40, 60);
-    APU_PULSE_DECAY(0, 512, DUTY_12, 2, 50);
+  APU_NOISE_DECAY(10, 40, 60);
+  APU_PULSE_DECAY(0, 512, DUTY_12, 2, 50);
 }
 
 void sfx_value_change()
 {
-    APU_PULSE_DECAY(0, 256, DUTY_25, 2, 25);
+  APU_PULSE_DECAY(0, 256, DUTY_25, 2, 25);
 }
 
 void sfx_select() 
 {
-    APU_PULSE_DECAY(0, 128, DUTY_50, 2, 12);
+  APU_PULSE_DECAY(0, 128, DUTY_50, 2, 12);
 }
 
 void sfx_score_up()
@@ -207,7 +207,7 @@ void cpu_tick(byte thread)
   unsigned char pc_mod = 0;
   
   if (t->prev_owner != owner) {
-  	score_up(owner-1, PLAYER_SCORE_CPU_TAKEOVER);
+    score_up(owner-1, PLAYER_SCORE_CPU_TAKEOVER);
   }
   
   t->prev_owner = owner;
@@ -260,37 +260,37 @@ void cpu_tick(byte thread)
     break;
 #define OPCODE_RND 9
   case OPCODE_RND:
-     t->a = get_random_byte(8);
-     break;
+    t->a = get_random_byte(8);
+    break;
 #define OPCODE_TAP 0xA
   case OPCODE_TAP:
-     t->pc = t->a;
-     pc_mod = 1;
-     break;
+    t->pc = t->a;
+    pc_mod = 1;
+    break;
 #define OPCODE_RSH 0xB
   case OPCODE_RSH:
-     t->a = (t->a >> arg);
-     break;
+    t->a = (t->a >> arg);
+    break;
 #define OPCODE_LSH 0xC
   case OPCODE_LSH:
-     t->a = (t->a << arg);
-     break;
+    t->a = (t->a << arg);
+    break;
 #define OPCODE_INCA 0xD
-       case OPCODE_INCA:
-      t->a = (t->a + arg);
-      break;
+  case OPCODE_INCA:
+    t->a = (t->a + arg);
+    break;
 #define OPCODE_TAX 0xE
-    case OPCODE_TAX:
-      t->x = t->a;
-      break;
+  case OPCODE_TAX:
+    t->x = t->a;
+    break;
 #define OPCODE_TAY 0xF
-    case OPCODE_TAY:
-      t->y = t->a;
-      break;
+  case OPCODE_TAY:
+    t->y = t->a;
+    break;
 #define OPCODE_STAX 0x10
-    case OPCODE_STAX:
-      cpu_mem_write(owner, t->x, t->a);
-      break;
+  case OPCODE_STAX:
+    cpu_mem_write(owner, t->x, t->a);
+    break;
   }
   if (pc_mod == 0) {
     t->pc += 2;
@@ -307,18 +307,18 @@ void cpu_tick(byte thread)
 // muzakery
 void __fastcall__ play_music(void)
 {
-   static const int note_table_49[64] = {
-   4304, 4062, 3834, 3619, 3416, 3224, 3043, 2872, 2711, 2559, 2415, 2279, 2151, 2031, 1917, 1809, 1707, 1611, 1521, 1436, 1355, 1279, 1207, 1139, 1075, 1015, 958, 904, 853, 805, 760, 717, 677, 639, 603, 569, 537, 507, 478, 451, 426, 402, 379, 358, 338, 319, 301, 284, 268, 253, 239, 225, 213, 201, 189, 179, 168, 159, 150, 142, 134, 126, 119, 112, };
+  static const int note_table_49[64] = {
+					4304, 4062, 3834, 3619, 3416, 3224, 3043, 2872, 2711, 2559, 2415, 2279, 2151, 2031, 1917, 1809, 1707, 1611, 1521, 1436, 1355, 1279, 1207, 1139, 1075, 1015, 958, 904, 853, 805, 760, 717, 677, 639, 603, 569, 537, 507, 478, 451, 426, 402, 379, 358, 338, 319, 301, 284, 268, 253, 239, 225, 213, 201, 189, 179, 168, 159, 150, 142, 134, 126, 119, 112, };
   
-   static byte m_ptr = 0;
-   static byte m_delay = 0;
+  static byte m_ptr = 0;
+  static byte m_delay = 0;
   
-   if ((m_ptr & 1) == 1) {
-     APU_PULSE_DECAY(1, note_table_49[m_ptr % 0x8], DUTY_25, 5, 8);
-   }
-   else {
-     APU_TRIANGLE_LENGTH(note_table_49[m_ptr % 0x8] / 8, 1);
-   }
+  if ((m_ptr & 1) == 1) {
+    APU_PULSE_DECAY(1, note_table_49[m_ptr % 0x8], DUTY_25, 5, 8);
+  }
+  else {
+    APU_TRIANGLE_LENGTH(note_table_49[m_ptr % 0x8] / 8, 1);
+  }
   
   m_ptr++;
 }
@@ -456,101 +456,100 @@ void handle_player_input()
   byte opponent = 1;
   for (i=0; i<2; i++) {
     if (players[i].state == PLAYER_STATE_ACTIVE) {
-    opponent = opponent - i;  
+      opponent = opponent - i;  
       
-    x = players[i].x;
-    y = players[i].y;
-    // neslib says check triggers first    
-    pad = pad_poll(i);
+      x = players[i].x;
+      y = players[i].y;
+      // neslib says check triggers first    
+      pad = pad_poll(i);
     
-    if (pad & (PAD_A | PAD_B)) {
-      // add some entry to the LFSR.
+      if (pad & (PAD_A | PAD_B)) {
+	// add some entropy to the LFSR.
+      	lfsr = lfsr | 1;
       
-      lfsr = lfsr | 1;
+	// did they press on a CPU?
+	if (BETWEEN(x, 0, 9*8) &&
+	    BETWEEN(y, 4*8, 7*8)) {
+	  players[i].current_block = cpu_threads[0].pc >> 4;
+	} 
       
-      // did they press on a CPU?
-      if (BETWEEN(x, 0, 9*8) &&
-          BETWEEN(y, 4*8, 7*8)) {
-        players[i].current_block = cpu_threads[0].pc >> 4;
-      } 
+	if (BETWEEN(x, 23*8, 31*8) &&
+	    BETWEEN(y, 4*8, 7*8)) {
+	  players[i].current_block = cpu_threads[1].pc >> 4;
+	} 
       
-      if (BETWEEN(x, 23*8, 31*8) &&
-          BETWEEN(y, 4*8, 7*8)) {
-        players[i].current_block = cpu_threads[1].pc >> 4;
-      } 
+	// for editing memory, each player can only modify their side
+	// so we offset the x bound check when it's player 2 (1)
+	if (i == 1) {
+	  mem_x_offset = 23;
+	}
       
-      // for editing memory, each player can only modify their side
-      // so we offset the x bound check when it's player 2 (1)
-      if (i == 1) {
-      	mem_x_offset = 23;
-      }
-      
-      if (BETWEEN(x, ((3 + mem_x_offset) *8), (9 + mem_x_offset) * 8) &&
-          BETWEEN(y, 7*8, 24*8)) {
+	if (BETWEEN(x, ((3 + mem_x_offset) *8), (9 + mem_x_offset) * 8) &&
+	    BETWEEN(y, 7*8, 24*8)) {
       	  byte addr = players[i].current_block * BYTES_PER_BLOCK;
         
           // find the row
           addr = addr + (((y - (8 * 8)) / 8) * 2);
           
 	  if ((i == 0 && x > 0x30) || (i == 1 && x > 0xe0)) {
-          	addr++;
+	    addr++;
           }
                   
           if (pad & PAD_B) {
-          	program_memory[addr] = 0;
+	    program_memory[addr] = 0;
           }
           else {
-                if (program_memory_meta[addr] != (1 + i)) {
-          	score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
-                }
-                      program_memory_meta[addr] = 1+i;
+	    if (program_memory_meta[addr] != (1 + i)) {
+	      score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
+	    }
+	    program_memory_meta[addr] = 1+i;
 
-       	  if (pad & PAD_UP) {
-          	program_memory[addr]++;
-                        sfx_value_change();
+	    if (pad & PAD_UP) {
+	      program_memory[addr]++;
+	      sfx_value_change();
 
-          }
-          else if (pad & PAD_DOWN) {
-          	program_memory[addr]--;
-                        sfx_value_change();
+	    }
+	    else if (pad & PAD_DOWN) {
+	      program_memory[addr]--;
+	      sfx_value_change();
 
-          }
-          else if (pad & PAD_LEFT) {
-          	program_memory[addr] <<= 1;
-                        sfx_value_change();
+	    }
+	    else if (pad & PAD_LEFT) {
+	      program_memory[addr] <<= 1;
+	      sfx_value_change();
 
-          }
-          else if (pad & PAD_RIGHT) {
-          	program_memory[addr] >>= 1;
-                        sfx_value_change();
+	    }
+	    else if (pad & PAD_RIGHT) {
+	      program_memory[addr] >>= 1;
+	      sfx_value_change();
 
-          }
+	    }
           }
         
    
-      }
+	}
       
-      if (BETWEEN(x, 0x56, 0xB2) &&
-          BETWEEN(y, 0x2E, 0x8F)) {
-            players[i].current_block = 
-              ((y - 0x2E) / 24) * 4 + 
-              ((x - 0x56) / 24);
-            sfx_select();
-      }
+	if (BETWEEN(x, 0x56, 0xB2) &&
+	    BETWEEN(y, 0x2E, 0x8F)) {
+	  players[i].current_block = 
+	    ((y - 0x2E) / 24) * 4 + 
+	    ((x - 0x56) / 24);
+	  sfx_select();
+	}
       
-      if (pad & PAD_B &&
-          (players[i].x - players[opponent].x) < 9 &&
-          (players[i].y - players[opponent].y) < 9 &&
-          players[opponent].state == PLAYER_STATE_ACTIVE) {
-        players[i].score += PLAYER_SCORE_CURSOR_DESTROY;
-        players[opponent].state = PLAYER_STATE_BLOWNUP;
-        players[opponent].count = get_random_byte(8);
-        sfx_cursor_destroy();
-      }
+	if (pad & PAD_B &&
+	    (players[i].x - players[opponent].x) < 9 &&
+	    (players[i].y - players[opponent].y) < 9 &&
+	    players[opponent].state == PLAYER_STATE_ACTIVE) {
+	  players[i].score += PLAYER_SCORE_CURSOR_DESTROY;
+	  players[opponent].state = PLAYER_STATE_BLOWNUP;
+	  players[opponent].count = get_random_byte(8);
+	  sfx_cursor_destroy();
+	}
       
-      program_memory_updated = 1;
-    }
-    else {
+	program_memory_updated = 1;
+      }
+      else {
     	if (pad & PAD_LEFT) players[i].dx = -MOVEMENT_DELTA;
     	else if (pad & PAD_RIGHT) players[i].dx = MOVEMENT_DELTA;
     	else players[i].dx=0;
@@ -558,7 +557,7 @@ void handle_player_input()
     	if (pad & PAD_UP) players[i].dy = -MOVEMENT_DELTA;
     	else if (pad & PAD_DOWN) players[i].dy = MOVEMENT_DELTA;
     	else players[i].dy=0;
-    }
+      }
     }
   }
 }
@@ -577,10 +576,10 @@ void handle_sprites()
 
   // draw them
   if (players[0].state == 1) {
-	  oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
+    oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
   }
   if (players[1].state == 1) {
-	  oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+    oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
   }
 
   if (oam_id!=0) oam_hide_rest(oam_id);
@@ -598,25 +597,25 @@ void __fastcall__ maybe_cpu_tick(void)
   handle_sprites();
 
   if (game_state != 1) {
-  	return;
+    return;
   }
   
   if (frame_count == GAME_LOOPS_PER_TICK/2) {
-     play_music();
+    play_music();
   }
     
   if (frame_count > GAME_LOOPS_PER_TICK) {
-      if ((flip_flop++ & 1) == 1) {
-      	cpu_tick(0);
-        sfx_cpu_tick_kick();
-      }
-      else {
-      	cpu_tick(1);
-        sfx_cpu_tick_snare();
-      }
-      frame_count = 0;
-      redraw_cpu = 1;
-      play_music();
+    if ((flip_flop++ & 1) == 1) {
+      cpu_tick(0);
+      sfx_cpu_tick_kick();
+    }
+    else {
+      cpu_tick(1);
+      sfx_cpu_tick_snare();
+    }
+    frame_count = 0;
+    redraw_cpu = 1;
+    play_music();
   }
   
   
@@ -640,11 +639,11 @@ void draw_status(void)
 }
 
 const char bg_row[32] = {
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-  0x8D, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-  0x8D, 
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+			 0x8D, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+			 0x8D, 
+			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
 };
 
 void draw_gameloop_bg()
@@ -696,8 +695,8 @@ void draw_gameloop_bg()
   
   for (x = 0 ; x < 4 ; x++) {
     for (y = 0; y < 4; y++) {
-       vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
-       vram_fill(1 + (y * 4) + x, 1);
+      vram_adr(NTADR_A(11 + (x * 3), 6 + (y * 3)));
+      vram_fill(1 + (y * 4) + x, 1);
     }
   }
   
@@ -752,10 +751,10 @@ void game_loop(void)
     
       for (t = 0; t < 2; t++) {
       	if (players[t].state == PLAYER_STATE_BLOWNUP) {
-           players[t].count--;
-           if (players[t].count == 0) {
-           	players[t].state = PLAYER_STATE_ACTIVE;
-           }
+	  players[t].count--;
+	  if (players[t].count == 0) {
+	    players[t].state = PLAYER_STATE_ACTIVE;
+	  }
         }
       }
     
