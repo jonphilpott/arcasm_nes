@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "main.h"
+
 // include NESLIB header
 #include "neslib.h"
 
@@ -22,6 +24,38 @@
 //#link "apu.c"
 
 
+byte get_random_byte(byte rounds);
+void sfx_cpu_tick_snare();
+void sfx_cpu_tick_kick();
+void sfx_cursor_destroy();
+void sfx_value_change();
+void sfx_select();
+void sfx_score_up();
+void __fastcall__ score_up(byte player, int inc);
+void setup_graphics();
+void update_memory_ownership(byte addr, byte owner);
+void cpu_mem_write(byte own, byte addr, byte val);
+void ai_place_program(byte force);
+void reset_memory();
+void cpu_tick(byte thread);
+void __fastcall__ play_music(void);
+void clrscr();
+byte title_screen(void);
+void gameover_screen(void);
+void draw_mem(byte sx, byte sy, struct player_state *p);
+void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs);
+void handle_player_input();
+void handle_sprites();
+void __fastcall__ maybe_cpu_tick(void);
+void draw_status(void);
+void draw_gameover(void);
+void draw_gameloop_bg();
+void handle_enemies();
+byte gameover_check();
+void game_loop(void);
+void main(void);
+
+
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] =
   { 
@@ -38,19 +72,6 @@ const char PALETTE[32] =
    0x0D,0x27,0x2A	// sprite palette 3
   };
 
-#define PLAYER_SCORE_CPU_TAKEOVER (128)
-#define PLAYER_SCORE_MEM_WRITE (128)
-#define PLAYER_SCORE_CURSOR_DESTROY (64)
-#define PLAYER_SCORE_CURSOR_MEMEDIT (8)
-
-#define BYTES_PER_INSTRUCTION	2
-#define INSTRUCTIONS_PER_BLOCK  8
-#define BYTES_PER_BLOCK         (INSTRUCTIONS_PER_BLOCK * BYTES_PER_INSTRUCTION)
-#define NUMBER_OF_BLOCKS        16
-
-#define MEM_BYTES (BYTES_PER_INSTRUCTION * INSTRUCTIONS_PER_BLOCK * NUMBER_OF_BLOCKS)
-
-
 static byte program_memory[MEM_BYTES];
 static byte program_memory_meta[MEM_BYTES];
 //static byte program_block_flags[NUMBER_OF_BLOCKS];
@@ -59,10 +80,6 @@ static byte program_memory_touched = 0;
 static byte program_memory_updated = 0;
 
 struct player_state {
-#define PLAYER_STATE_BLOWNUP 2
-#define PLAYER_STATE_ACTIVE 1
-#define PLAYER_STATE_INACTIVE 0
-#define PLAYER_STATE_AI 3
   byte state;
   byte current_block;
   unsigned int  score;
@@ -81,19 +98,13 @@ struct enemy {
   sbyte dx, dy;
 };
 
-#define MAX_ENEMIES (1)
 struct enemy enemies[MAX_ENEMIES];
 
 static struct player_state players[2];
 
-#define GAME_STATE_INTRO    0
-#define GAME_STATE_GAME     1
-#define GAME_STATE_GAMEOVER 2
 
 static byte game_state = 0;
 
-#define GAME_MODE_SINGLE 0
-#define GAME_MODE_DUAL   1
 static byte game_mode = 0;
 
 struct cpu_regs {
@@ -103,25 +114,25 @@ struct cpu_regs {
 
 static struct cpu_regs cpu_threads[2];
 
-#define AI_N_PROGRAMS 8
-static const byte ai_programs[] = {
-  // PROGRAM 1
-  0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
-  // PROGRAM 2
-  0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 
-  // PROGRAM 3
-  0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 
-  // PROGRAM 4
-  0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 
-  // PROGRAM 5
-  0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 
-  // PROGRAM 6
-  0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, 
-  // PROGRAM 7
-  0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
-  // PROGRAM 8
-  0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f, 
-};
+static const byte ai_programs[] =
+  {
+   // PROGRAM 1
+   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 
+   // PROGRAM 2
+   0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 
+   // PROGRAM 3
+   0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 
+   // PROGRAM 4
+   0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 
+   // PROGRAM 5
+   0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 
+   // PROGRAM 6
+   0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, 
+   // PROGRAM 7
+   0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+   // PROGRAM 8
+   0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f, 
+  };
 
 
 static byte lfsr = 0x55;
@@ -178,24 +189,23 @@ void __fastcall__ score_up(byte player, int inc)
 }
 
 // setup PPU and tables
-void setup_graphics() {
+void setup_graphics()
+{
   // clear sprites
   oam_clear();
   // set palette colors
   pal_all(PALETTE);
 }
 
-
-
 void update_memory_ownership(byte addr, byte owner)
 {  
   if (owner != 0) {
-  	program_memory_touched++;
+    program_memory_touched++;
   }
   else {
-        if (program_memory_touched > 0) {
-	  	program_memory_touched--;
-        }
+    if (program_memory_touched > 0) {
+      program_memory_touched--;
+    }
   }
   
   program_memory_meta[addr] = owner;
@@ -226,33 +236,33 @@ void ai_place_program(byte force)
   // if it has, abandon it and move elsewhere
   if (! force) {
     for (i = 0 ; i < 16; i++) {
-    	if (program_memory[last_program_location + i] != 
-            ai_programs[(last_program_number * 16) + i]) {
-            violated = 1;
-        }
+      if (program_memory[last_program_location + i] != 
+	  ai_programs[(last_program_number * 16) + i]) {
+	violated = 1;
+      }
      
       // return memory to system
       if (violated) {
-	      for (i = 0 ; i < 16; i++) {
-	        update_memory_ownership(last_program_location + i, 0);
-	     }
+	for (i = 0 ; i < 16; i++) {
+	  update_memory_ownership(last_program_location + i, 0);
+	}
       }
     }
   }
   
   if (violated) {
-  	last_program_location = get_random_byte(7) << 1;
-    	last_program_number   = get_random_byte(3);
+    last_program_location = get_random_byte(7) << 1;
+    last_program_number   = get_random_byte(3);
     
-    	for (i = 0 ; i < 16 ; i++) {
-          cpu_mem_write(2, last_program_location + i, 
-             ai_programs[(last_program_number * 16) + i]);
-        }
+    for (i = 0 ; i < 16 ; i++) {
+      cpu_mem_write(2, last_program_location + i, 
+		    ai_programs[(last_program_number * 16) + i]);
+    }
     
-    	// HIJACK CPU1
-    	cpu_threads[1].pc = last_program_location;
-        cpu_threads[1].prev_owner = 2;
-        players[1].current_block = last_program_location >> 4;
+    // HIJACK CPU1
+    cpu_threads[1].pc = last_program_location;
+    cpu_threads[1].prev_owner = 2;
+    players[1].current_block = last_program_location >> 4;
   }
 }
 
@@ -285,8 +295,8 @@ void reset_memory()
   cpu_threads[1].pc = players[1].current_block * BYTES_PER_BLOCK;
   
   if (game_mode == GAME_MODE_SINGLE) {
-          players[1].state = PLAYER_STATE_AI;
-          //ai_place_program(1);
+    players[1].state = PLAYER_STATE_AI;
+    //ai_place_program(1);
   }
     
   for (i = 0 ; i < MAX_ENEMIES; i++) {
@@ -297,8 +307,6 @@ void reset_memory()
     enemies[i].state = 1;
   }
 }
-
-
 
 void cpu_tick(byte thread)
 {
@@ -317,87 +325,69 @@ void cpu_tick(byte thread)
   t->prev_owner = owner;
   
   switch (opcode) {
-#define OPCODE_NOP 0
   case OPCODE_NOP:
     break;
-#define OPCODE_LDA 1
   case OPCODE_LDA:
     t->a = arg;
     break;
-#define OPCODE_STA 2
   case OPCODE_STA:
     cpu_mem_write(owner, arg, t->a);
     break;
-#define OPCODE_HOP 3
   case OPCODE_HOP:
     pc_mod = 1;
     t->pc += (signed char) arg;
     break;
-#define OPCODE_JMP 4
   case OPCODE_JMP:
     t->pc = arg;
     pc_mod = 1;
     break;
-#define OPCODE_ZHOP 5
   case OPCODE_ZHOP:
     if (t->a == 0) {
       pc_mod = 1;
       t->pc += 4;
     }
     break;
-#define OPCODE_WLD 6
   case OPCODE_WLD:
     t->x = program_memory[t->a];
     t->y = program_memory[t->a + 1];
     break;
-#define OPCODE_WCP 7
   case OPCODE_WCP:
     program_memory[t->a] = t->x;
     program_memory[t->a + 1] = t->y;
     break;
-#define OPCODE_MEMW 8
   case OPCODE_MEMW:
     pc_mod = 1;
     if (program_memory[arg] == t->a) {
       t->pc += 2;
     }
     break;
-#define OPCODE_RND 9
   case OPCODE_RND:
     t->a = get_random_byte(8);
     break;
-#define OPCODE_TAP 0xA
   case OPCODE_TAP:
     t->pc = t->a;
     pc_mod = 1;
     break;
-#define OPCODE_RSH 0xB
   case OPCODE_RSH:
     t->a = (t->a >> arg);
     break;
-#define OPCODE_LSH 0xC
   case OPCODE_LSH:
     t->a = (t->a << arg);
     break;
-#define OPCODE_INCA 0xD
   case OPCODE_INCA:
     t->a = (t->a + arg);
     break;
-#define OPCODE_TAX 0xE
   case OPCODE_TAX:
     t->x = t->a;
     break;
-#define OPCODE_TAY 0xF
   case OPCODE_TAY:
     t->y = t->a;
     break;
-#define OPCODE_STAX 0x10
   case OPCODE_STAX:
     cpu_mem_write(owner, t->x, t->a);
     break;
-#define OPCODE_INCX 0x11
-    case OPCODE_INCX:
-      t->x += arg;
+  case OPCODE_INCX:
+    t->x += arg;
   }
   if (pc_mod == 0) {
     t->pc += 2;
@@ -482,15 +472,15 @@ byte title_screen(void)
     //by1 = get_random_byte(8);
     by2 = pad_trigger(0) | pad_trigger(1);
     if (by2 & PAD_SELECT) {
-    	if (mode) { mode = 0; }
-        else { mode = 1; }
+      if (mode) { mode = 0; }
+      else { mode = 1; }
     }
     
     if (mode) {
-	oam_id = oam_spr(72, 128, 0x1F, 1, oam_id);
+      oam_id = oam_spr(72, 128, 0x1F, 1, oam_id);
     } 
     else {
-    	oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
+      oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
     }
     oam_hide_rest(oam_id);  
     if (by2 & PAD_START) break;
@@ -593,9 +583,7 @@ void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs)
 //void draw_blocks();
 //void draw_player_sprite(struct player_state *p);
 
-#define BETWEEN(var, min, max) ((var) > (min) && (var) < (max))
 
-#define MOVEMENT_DELTA (1)
 void handle_player_input()
 {
   byte i, pad;
@@ -646,36 +634,36 @@ void handle_player_input()
           if (!(game_mode == GAME_MODE_SINGLE && 
                 program_memory_meta[addr] == 2)) {
           
-          if (pad & PAD_B) {
-	    program_memory[addr] = 0;
-          }
-          else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
-	    if (program_memory_meta[addr] != (1 + i)) {
-	      score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
-              update_memory_ownership(addr, 1+i);
+	    if (pad & PAD_B) {
+	      program_memory[addr] = 0;
 	    }
+	    else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
+	      if (program_memory_meta[addr] != (1 + i)) {
+		score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
+		update_memory_ownership(addr, 1+i);
+	      }
 
-	    if (pad & PAD_UP) {
-	      program_memory[addr]++;
-	      sfx_value_change();
-	    }
-	    else if (pad & PAD_DOWN) {
-	      program_memory[addr]--;
-	      sfx_value_change();
+	      if (pad & PAD_UP) {
+		program_memory[addr]++;
+		sfx_value_change();
+	      }
+	      else if (pad & PAD_DOWN) {
+		program_memory[addr]--;
+		sfx_value_change();
 
-	    }
-	    else if (pad & PAD_LEFT) {
-	      program_memory[addr] <<= 1;
-	      sfx_value_change();
+	      }
+	      else if (pad & PAD_LEFT) {
+		program_memory[addr] <<= 1;
+		sfx_value_change();
 
-	    }
-	    else if (pad & PAD_RIGHT) {
-	      program_memory[addr] >>= 1;
-	      sfx_value_change();
+	      }
+	      else if (pad & PAD_RIGHT) {
+		program_memory[addr] >>= 1;
+		sfx_value_change();
 
+	      }
 	    }
-          }
-	}
+	  }
         }
           
 	if (BETWEEN(x, 0x56, 0xB2) &&
@@ -741,7 +729,6 @@ void handle_sprites()
   if (oam_id!=0) oam_hide_rest(oam_id);
 }
 
-#define GAME_LOOPS_PER_TICK 48
 
 static byte redraw_cpu = 0;
 
@@ -801,20 +788,20 @@ void draw_gameover(void)
 {
 
   if (game_mode == GAME_MODE_SINGLE) {
-  	if (players[0].score > players[1].score) {
-          vrambuf_put(NTADR_A(10, 25), "YOU WIN", 7);
-        }
-        else {
-          vrambuf_put(NTADR_A(10, 25), "YOU LOSE", 9);
-        }
+    if (players[0].score > players[1].score) {
+      vrambuf_put(NTADR_A(10, 25), "YOU WIN", 7);
+    }
+    else {
+      vrambuf_put(NTADR_A(10, 25), "YOU LOSE", 9);
+    }
   }
   else {
-      	if (players[0].score > players[1].score) {
-          vrambuf_put(NTADR_A(10, 25), "PLAYER 1 WINS", 13);
-        }
-        else {
-          vrambuf_put(NTADR_A(10, 25), "PLAYER 2 WINS", 13);
-        }
+    if (players[0].score > players[1].score) {
+      vrambuf_put(NTADR_A(10, 25), "PLAYER 1 WINS", 13);
+    }
+    else {
+      vrambuf_put(NTADR_A(10, 25), "PLAYER 2 WINS", 13);
+    }
   }
 
   
@@ -928,7 +915,7 @@ void handle_enemies()
 byte gameover_check()
 {
   if (program_memory_touched == 255) {
-  	return true;
+    return true;
   }
   return false;
 }
@@ -993,12 +980,12 @@ void game_loop(void)
     
       if (c & 0x40) {
         if (game_mode == GAME_MODE_SINGLE) {
-	      	ai_place_program(0);
+	  ai_place_program(0);
         }
         if (gameover_check()) {
-           game_state = GAME_STATE_GAMEOVER;
-           draw_gameover();
-           return;
+	  game_state = GAME_STATE_GAMEOVER;
+	  draw_gameover();
+	  return;
         }
       }
     
