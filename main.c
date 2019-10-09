@@ -24,38 +24,6 @@
 //#link "apu.c"
 
 
-byte get_random_byte(byte rounds);
-void sfx_cpu_tick_snare();
-void sfx_cpu_tick_kick();
-void sfx_cursor_destroy();
-void sfx_value_change();
-void sfx_select();
-void sfx_score_up();
-void __fastcall__ score_up(byte player, int inc);
-void setup_graphics();
-void update_memory_ownership(byte addr, byte owner);
-void cpu_mem_write(byte own, byte addr, byte val);
-void ai_place_program(byte force);
-void reset_memory();
-void cpu_tick(byte thread);
-void __fastcall__ play_music(void);
-void clrscr();
-byte title_screen(void);
-void gameover_screen(void);
-void draw_mem(byte sx, byte sy, struct player_state *p);
-void draw_cpu_thread(byte sx, byte sy, struct cpu_regs *regs);
-void handle_player_input();
-void handle_sprites();
-void __fastcall__ maybe_cpu_tick(void);
-void draw_status(void);
-void draw_gameover(void);
-void draw_gameloop_bg();
-void handle_enemies();
-byte gameover_check();
-void game_loop(void);
-void main(void);
-
-
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] =
   { 
@@ -849,9 +817,9 @@ void draw_gameloop_bg()
   vram_adr(NTADR_A(1, 24));
   vram_fill(0x8F, 30);
   vram_adr(NTADR_A(9, 24));
-  vram_fill(0x8E, 1);
+  vram_fill(0x8C, 1);
   vram_adr(NTADR_A(22, 24));
-  vram_fill(0x8E, 1);
+  vram_fill(0x8C, 1);
   
   
   for (i = 4; i < 24; i++) {
