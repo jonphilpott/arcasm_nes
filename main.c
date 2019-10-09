@@ -62,6 +62,7 @@ struct player_state {
 #define PLAYER_STATE_BLOWNUP 2
 #define PLAYER_STATE_ACTIVE 1
 #define PLAYER_STATE_INACTIVE 0
+#define PLAYER_STATE_AI 3
   byte state;
   byte current_block;
   unsigned int  score;
@@ -80,7 +81,7 @@ struct enemy {
   sbyte dx, dy;
 };
 
-#define MAX_ENEMIES (4)
+#define MAX_ENEMIES (1)
 struct enemy enemies[MAX_ENEMIES];
 
 static struct player_state players[2];
@@ -89,7 +90,11 @@ static struct player_state players[2];
 #define GAME_STATE_GAME     1
 #define GAME_STATE_GAMEOVER 2
 
-static byte game_state = 1;
+static byte game_state = 0;
+
+#define GAME_MODE_SINGLE 0
+#define GAME_MODE_DUAL   1
+static byte game_mode = 0;
 
 struct cpu_regs {
   byte a, x, y, pc;
@@ -98,11 +103,16 @@ struct cpu_regs {
 
 static struct cpu_regs cpu_threads[2];
 
+static const byte ai_programs[] = {
+0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+};
+
+
 static byte lfsr = 0x55;
 
 byte get_random_byte(byte rounds)
 { 
-  byte out;
+  byte out = 0;
   while (rounds--) {
     lfsr = (lfsr >> 1) | 
       ((((lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3)) & 1) << 7);
@@ -159,6 +169,41 @@ void setup_graphics() {
   pal_all(PALETTE);
 }
 
+static byte last_program_location = 0;
+static byte last_program_number = 0;
+
+void ai_place_program(byte force)
+{
+  byte i;
+  byte violated = force;
+
+  // check if previous program has been violated in some fashion. 
+  // if it has, abandon it and move elsewhere
+  if (! force) {
+    for (i = 0 ; i < 16; i++) {
+    	if (program_memory[last_program_location + i] != 
+            ai_programs[(last_program_number * 16) + i]) {
+            violated = 1;
+        }
+    }
+  }
+  
+  if (violated) {
+  	last_program_location = get_random_byte(7) << 1;
+    	last_program_number   = get_random_byte(4);
+    
+    	for (i = 0 ; i < 16 ; i++) {
+          program_memory[last_program_location + i] = 
+             ai_programs[(last_program_number * 16) + i];
+          program_memory_meta[last_program_location + i] = 3;
+        }
+    
+    	// make cpu1 jump here.
+    	cpu_threads[1].pc = last_program_location;
+        players[1].current_block = last_program_location >> 4;
+  }
+}
+
 void reset_memory()
 {
   byte i;
@@ -166,8 +211,12 @@ void reset_memory()
   //memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
   memfill(program_memory_meta, 0, MEM_BYTES);
   
-  players[0].state = 1;
-  players[1].state = 1;
+  players[0].state = PLAYER_STATE_ACTIVE;
+  players[1].state = PLAYER_STATE_ACTIVE;
+  
+
+  
+  
   players[0].current_block = get_random_byte(4);
   players[1].current_block = get_random_byte(4);
   players[0].score = 0x0;
@@ -185,6 +234,12 @@ void reset_memory()
   cpu_threads[0].pc = players[0].current_block * BYTES_PER_BLOCK;
   cpu_threads[1].pc = players[1].current_block * BYTES_PER_BLOCK;
   
+  if (game_mode == GAME_MODE_SINGLE) {
+          program_memory_meta[0] = 3;
+          players[1].state = PLAYER_STATE_AI;
+          ai_place_program(1);
+  }
+    
   for (i = 0 ; i < MAX_ENEMIES; i++) {
     enemies[i].dx = (i & 1) ? 1 : -1;
     enemies[i].dy = (i & 1) ? 2 : -1;
@@ -300,6 +355,9 @@ void cpu_tick(byte thread)
   case OPCODE_STAX:
     cpu_mem_write(owner, t->x, t->a);
     break;
+#define OPCODE_INCX 0x11
+    case OPCODE_INCX:
+      t->x += arg;
   }
   if (pc_mod == 0) {
     t->pc += 2;
@@ -342,10 +400,10 @@ void __fastcall__ play_music(void)
   int note = note_table_49[get_random_byte(5)];
   
   if (note < 800) {
-    APU_PULSE_DECAY(1, note, DUTY_25, 5, 8);
+    //APU_PULSE_DECAY(1, note, DUTY_25, 5, 8);
   }
   else {
-    APU_TRIANGLE_LENGTH(note, 1);
+    //APU_TRIANGLE_LENGTH(note, 1);
   }
   
   m_ptr++;
@@ -360,24 +418,46 @@ void clrscr()
   ppu_on_all();
 }
 
-void title_screen(void)
+byte title_screen(void)
 {
   byte by1 = 0;
   byte by2 = 0;
+  byte mode = 0;
+  byte oam_id = 0;
   clrscr();
   
-  vram_adr(NTADR_A(9,12));
+  vram_adr(NTADR_A(9,8));
   vram_write("ARCASM", 6);
-  vram_adr(NTADR_A(9, 14));
-  vram_write("PRESS START", 12);
-
+  
+  vram_adr(NTADR_A(11, 12));
+  vram_write("VS. CPU MODE", 13);
+    
+  vram_adr(NTADR_A(11, 16));
+  vram_write("DUEL", 4);
+    
   vram_adr(NTADR_A(10, 10));
   
   while (1) {
-    by1 = get_random_byte(8);
+
+    //by1 = get_random_byte(8);
     by2 = pad_trigger(0) | pad_trigger(1);
+    if (by2 & PAD_SELECT) {
+    	if (mode) { mode = 0; }
+        else { mode = 1; }
+    }
+    
+    if (mode) {
+	oam_id = oam_spr(72, 128, 0x1F, 1, oam_id);
+    } 
+    else {
+    	oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
+    }
+    oam_hide_rest(oam_id);  
     if (by2 & PAD_START) break;
   }
+  
+  
+  return mode;
 }
 
 void gameover_screen(void)
@@ -522,7 +602,10 @@ void handle_player_input()
 	  if ((i == 0 && x > 0x30) || (i == 1 && x > 0xe0)) {
 	    addr++;
           }
-                  
+          
+          if (!(game_mode == GAME_MODE_SINGLE && 
+                program_memory_meta[addr] == 3)) {
+          
           if (pad & PAD_B) {
 	    program_memory[addr] = 0;
           }
@@ -554,7 +637,8 @@ void handle_player_input()
 	    }
           }
 	}
-      
+        }
+          
 	if (BETWEEN(x, 0x56, 0xB2) &&
 	    BETWEEN(y, 0x2E, 0x8F)) {
 	  players[i].current_block = 
@@ -767,7 +851,7 @@ void handle_enemies()
 void game_loop(void) 
 {
   byte t = 0;
-
+  byte c = 0;
   draw_gameloop_bg();
   
   reset_memory();
@@ -821,6 +905,12 @@ void game_loop(void)
     
       APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
       ppu_wait_frame();
+    
+      if (c & 0x40) {
+      	ai_place_program(0);
+      }
+    
+      c++; // geddit???
     }
 }
 
@@ -840,10 +930,11 @@ void main(void)
     switch (game_state) 
       {
       case GAME_STATE_INTRO:
-        title_screen();
+        game_mode = title_screen();
         game_state = GAME_STATE_GAME;
         break;
       case GAME_STATE_GAME:
+        setup_graphics();
         game_loop();
         break;
       case GAME_STATE_GAMEOVER:
