@@ -36,8 +36,8 @@ const char PALETTE[32] =
 
    0x16,0x35,0x24,0x00,	// sprite palette 0
    0x00,0x37,0x25,0x00,	// sprite palette 1
-   0x0D,0x2D,0x3A,0x00,	// sprite palette 2
-   0x0D,0x27,0x2A	// sprite palette 3
+   0x0D,0x2D,0x15,0x00,	// sprite palette 2
+   0x0D,0x2D,0x27	// sprite palette 3
   };
 
 static byte program_memory[MEM_BYTES];
@@ -701,7 +701,7 @@ void handle_sprites()
 		     bx,
 		     by,
 		     0x15,
-		     1+i,
+		     2+i,
 		     oam_id,
 		     );
   }
