@@ -32,24 +32,29 @@
 
 
 
+// regular instructions
 #define OPCODE_NOP  0x00
 #define OPCODE_LDA  0x01
 #define OPCODE_STA  0x02
 #define OPCODE_TAX  0x03
 #define OPCODE_TAY  0x04
 #define OPCODE_STAX 0x05
-#define OPCODE_INCX 0x06
-#define OPCODE_INCA 0x07
-#define OPCODE_HOP  0x08
-#define OPCODE_JMP  0x09
-#define OPCODE_ZHOP 0x0A
-#define OPCODE_WLD  0x0B
-#define OPCODE_WCP  0x0C
-#define OPCODE_MEMW 0x0D
-#define OPCODE_RND  0x0E
-#define OPCODE_TAP  0x0F
-#define OPCODE_RSH  0x10
-#define OPCODE_LSH  0x11
+#define OPCODE_RDX  0x06
+#define OPCODE_INCX 0x07
+#define OPCODE_INCA 0x08
+#define OPCODE_HOP  0x09
+#define OPCODE_JMP  0x0A
+#define OPCODE_ZHOP 0x0B
+#define OPCODE_WLD  0x0C
+#define OPCODE_WCP  0x0D
+#define OPCODE_MEMW 0x0E
+#define OPCODE_RND  0x0F
+#define OPCODE_TAP  0x10
+#define OPCODE_RSH  0x11
+#define OPCODE_LSH  0x12
+
+// stupid insrtructions
+#define OPCODE_RCP  0x42
 
 
 static const unsigned char ai_programs[] =

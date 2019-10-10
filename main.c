@@ -315,12 +315,12 @@ void cpu_tick(byte thread)
     }
     break;
   case OPCODE_WLD:
-    t->x = program_memory[t->a];
-    t->y = program_memory[t->a + 1];
+    t->y = program_memory[(t->x + 1) & 0xFF];
+    t->a = program_memory[t->x];
     break;
   case OPCODE_WCP:
-    program_memory[t->a] = t->x;
-    program_memory[t->a + 1] = t->y;
+    cpu_mem_write(owner, t->x, t->a);
+    cpu_mem_write(owner, t->x + 1, t->y);
     break;
   case OPCODE_MEMW:
     pc_mod = 1;
@@ -355,7 +355,17 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_INCX:
     t->x += arg;
+    break;
+  case OPCODE_RDX:
+    t->a = program_memory[t->x];
+    break;
+  case OPCODE_RCP:
+    // stupidly OP instruction.. 
+    cpu_mem_write(owner, t->x,   program_memory[pc + ((sbyte) arg)]);
+    cpu_mem_write(owner, t->x+1, program_memory[pc + ((sbyte) arg)+1]);
+    break;
   }
+  
   if (pc_mod == 0) {
     t->pc += 2;
   }
