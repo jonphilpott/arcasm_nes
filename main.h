@@ -16,6 +16,10 @@
 #define PLAYER_STATE_BLOWNUP    2
 #define PLAYER_STATE_AI         3
 
+#define ENEMY_STATE_INACTIVE 0
+#define ENEMY_STATE_ACTIVE   1
+#define ENEMY_STATE_BLOWUP   2
+
 
 #define MAX_ENEMIES        (1)
 #define GAME_STATE_INTRO    0

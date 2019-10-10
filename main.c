@@ -59,6 +59,7 @@ struct player_state {
 
 struct enemy {
   byte state;
+  byte count_addr;
   byte type;
   
   
@@ -113,6 +114,11 @@ void sfx_cursor_destroy()
 {
   APU_NOISE_DECAY(10, 40, 60);
   APU_PULSE_DECAY(0, 512, DUTY_12, 2, 50);
+}
+
+void sfx_enemy_detonate()
+{
+  APU_NOISE_DECAY(10, 40, 60);
 }
 
 void sfx_value_change()
@@ -245,15 +251,16 @@ void reset_memory()
   
   if (game_mode == GAME_MODE_SINGLE) {
     players[1].state = PLAYER_STATE_AI;
-    //ai_place_program(1);
+    program_memory[0] = get_random_byte(5);
   }
     
   for (i = 0 ; i < MAX_ENEMIES; i++) {
-    enemies[i].dx = (i & 1) ? 1 : -1;
-    enemies[i].dy = (i & 1) ? 2 : -1;
+    enemies[i].dx = 0;
+    enemies[i].dy = 0;
     enemies[i].x = get_random_byte(8);
     enemies[i].y = get_random_byte(8);
-    enemies[i].state = 1;
+    enemies[i].count_addr = get_random_byte(8);
+    enemies[i].state = ENEMY_STATE_INACTIVE;
   }
 }
 
@@ -637,6 +644,7 @@ void handle_sprites()
 {
   byte oam_id = 0;
   byte i; 
+  byte sprite_id;
 
   // move applicable sprites
   players[0].x += players[0].dx;
@@ -645,10 +653,11 @@ void handle_sprites()
   players[1].y += players[1].dy;
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
-    if (enemies[i].state == 1) {
+    if (enemies[i].state != ENEMY_STATE_INACTIVE) {
       enemies[i].x += enemies[i].dx;
       enemies[i].y += enemies[i].dy;
-      oam_id = oam_spr(enemies[i].x, enemies[i].y, 0x17 + i, 3, oam_id);
+      sprite_id = (enemies[i].state == ENEMY_STATE_BLOWUP) ? 0x21 : 0x17 + i;
+      oam_id = oam_spr(enemies[i].x, enemies[i].y, sprite_id, 3, oam_id);
     }
   }
   
@@ -828,27 +837,75 @@ void draw_gameloop_bg()
   ppu_on_all();
 }
 
+static byte enemy_delay_ctr = 0;
+
 void handle_enemies()
 {
   byte i;
+  byte x;
   struct enemy *e;
+  
+  enemy_delay_ctr++;
+  
+   if (enemy_delay_ctr > 0x4) {
+      program_memory[e->count_addr]--;
+      program_memory_updated = 1;
+      enemy_delay_ctr = 0;
+    }
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
     e = &enemies[i];
-    	
-    if (e->state == 1) {
-      if (e->x < 0x54) {
-	e->dx = i+1;
-      }
-      else if (e->x > 0xa9) {
-	e->dx = -1;
-      }
+    
+    
+      if (e->state == ENEMY_STATE_ACTIVE) {
+	      if (e->x < 0x54) {
+		e->dx = i+1;
+      	}
+     	 else if (e->x > 0xa9) {
+		e->dx = -1;
+      	}
           
-      if (e->y < 29) {
-	e->dy = i+1;
+      	if (e->y < 37) {
+		e->dy = i+1;
+      	}
+      	else if (e->y > 188) {
+		e->dy = -1;
+      	}
       }
-      else if (e->y > 188) {
-	e->dy = -1;
+    
+    if (program_memory[e->count_addr] == 0) {
+      if (e->state == ENEMY_STATE_INACTIVE) {
+        e->state = ENEMY_STATE_ACTIVE;
+        e->dx = 1;
+        e->dy = 1;
+        e->x = 100;
+        e->y = 100;
+        program_memory[e->count_addr] = get_random_byte(8);
+      }
+      else if (e->state == ENEMY_STATE_BLOWUP) {
+        e->state = ENEMY_STATE_INACTIVE;
+        program_memory[e->count_addr] = get_random_byte(8);
+      }
+      else {
+      	// blow up.
+      	sfx_enemy_detonate();
+        
+        if (BETWEEN(e->x, 0x56, 0xB2) &&
+	    BETWEEN(e->y, 0x2E, 0x8F)) {
+	    byte current_block = 
+	      ((e->y - 0x2E) / 24) * 4 + 
+	      ((e->x - 0x56) / 24);
+        
+      	for (x = 0; x < BYTES_PER_BLOCK ; x++) {
+                byte a = (current_block * BYTES_PER_BLOCK) + x;
+       		program_memory[a] = 0;
+          	update_memory_ownership(a, 0);
+        }
+        }
+        program_memory[e->count_addr] = 5;
+        e->state = ENEMY_STATE_BLOWUP;
+        e->dx = 0;
+        e->dy = 0;
       }
     }
   }
@@ -920,15 +977,23 @@ void game_loop(void)
       APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
       ppu_wait_frame();
     
-      if (c & 0x40) {
+      if (c > 0x10) {
         if (game_mode == GAME_MODE_SINGLE) {
-	  ai_place_program(0);
+          if (program_memory[0] == 0) {
+	  	ai_place_program(0);
+                program_memory[0] = get_random_byte(6);
+          }
+          else {
+             program_memory[0]--;
+             program_memory_updated = 1;
+          }
         }
         if (gameover_check()) {
 	  game_state = GAME_STATE_GAMEOVER;
 	  draw_gameover();
 	  return;
         }
+        c = 0;
       }
     
       c++; // geddit???
