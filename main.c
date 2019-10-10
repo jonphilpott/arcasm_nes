@@ -360,7 +360,7 @@ void cpu_tick(byte thread)
     t->a = program_memory[t->x];
     break;
   case OPCODE_RCP:
-    // stupidly OP instruction.. 
+    // stupidly OP instruction, but here so we can implement IMP like.
     cpu_mem_write(owner, t->x,   program_memory[pc + ((sbyte) arg)]);
     cpu_mem_write(owner, t->x+1, program_memory[pc + ((sbyte) arg)+1]);
     break;
@@ -596,34 +596,34 @@ void handle_player_input()
           }
           
           
-	    if (pad & PAD_B) {
-	      program_memory[addr] = 0;
+	  if (pad & PAD_B) {
+	    program_memory[addr] = 0;
+	  }
+	  else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
+	    if (program_memory_meta[addr] != (1 + i)) {
+	      score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
+	      update_memory_ownership(addr, 1+i);
 	    }
-	    else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
-	      if (program_memory_meta[addr] != (1 + i)) {
-		score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
-		update_memory_ownership(addr, 1+i);
-	      }
 
-	      if (pad & PAD_UP) {
-		program_memory[addr]++;
-		sfx_value_change();
-	      }
-	      else if (pad & PAD_DOWN) {
-		program_memory[addr]--;
-		sfx_value_change();
+	    if (pad & PAD_UP) {
+	      program_memory[addr]++;
+	      sfx_value_change();
+	    }
+	    else if (pad & PAD_DOWN) {
+	      program_memory[addr]--;
+	      sfx_value_change();
 
-	      }
-	      else if (pad & PAD_LEFT) {
-		program_memory[addr] <<= 1;
-		sfx_value_change();
+	    }
+	    else if (pad & PAD_LEFT) {
+	      program_memory[addr] <<= 1;
+	      sfx_value_change();
 
-	      }
-	      else if (pad & PAD_RIGHT) {
-		program_memory[addr] >>= 1;
-		sfx_value_change();
+	    }
+	    else if (pad & PAD_RIGHT) {
+	      program_memory[addr] >>= 1;
+	      sfx_value_change();
 
-	      }
+	    }
 	    
 	  }
         }
@@ -687,13 +687,13 @@ void handle_sprites()
     byte by    = 0x30 + ((block >> 2) * 24);
     byte bx    = 0x60 + ((block &  3) * 24);
     
-  	oam_id = oam_spr(
-          bx,
-          by,
-          0x15,
-          1+i,
-          oam_id,
-          );
+    oam_id = oam_spr(
+		     bx,
+		     by,
+		     0x15,
+		     1+i,
+		     oam_id,
+		     );
   }
   
   
@@ -884,31 +884,31 @@ void handle_enemies()
   
   enemy_delay_ctr++;
   
-   if (enemy_delay_ctr > 0x4) {
-      program_memory[e->count_addr]--;
-      program_memory_updated = 1;
-      enemy_delay_ctr = 0;
-    }
+  if (enemy_delay_ctr > 0x4) {
+    program_memory[e->count_addr]--;
+    program_memory_updated = 1;
+    enemy_delay_ctr = 0;
+  }
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
     e = &enemies[i];
     
     
-      if (e->state == ENEMY_STATE_ACTIVE) {
-	      if (e->x < 0x54) {
-		e->dx = i+1;
-      	}
-     	 else if (e->x > 0xa9) {
-		e->dx = -1;
-      	}
-          
-      	if (e->y < 37) {
-		e->dy = i+1;
-      	}
-      	else if (e->y > 188) {
-		e->dy = -1;
-      	}
+    if (e->state == ENEMY_STATE_ACTIVE) {
+      if (e->x < 0x54) {
+	e->dx = i+1;
       }
+      else if (e->x > 0xa9) {
+	e->dx = -1;
+      }
+          
+      if (e->y < 37) {
+	e->dy = i+1;
+      }
+      else if (e->y > 188) {
+	e->dy = -1;
+      }
+    }
     
     if (program_memory[e->count_addr] == 0) {
       if (e->state == ENEMY_STATE_INACTIVE) {
@@ -929,15 +929,15 @@ void handle_enemies()
         
         if (BETWEEN(e->x, 0x56, 0xB2) &&
 	    BETWEEN(e->y, 0x2E, 0x8F)) {
-	    byte current_block = 
-	      ((e->y - 0x2E) / 24) * 4 + 
-	      ((e->x - 0x56) / 24);
+	  byte current_block = 
+	    ((e->y - 0x2E) / 24) * 4 + 
+	    ((e->x - 0x56) / 24);
         
-      	for (x = 0; x < BYTES_PER_BLOCK ; x++) {
-                byte a = (current_block * BYTES_PER_BLOCK) + x;
-       		program_memory[a] = 0;
-          	update_memory_ownership(a, 0);
-        }
+	  for (x = 0; x < BYTES_PER_BLOCK ; x++) {
+	    byte a = (current_block * BYTES_PER_BLOCK) + x;
+	    program_memory[a] = 0;
+	    update_memory_ownership(a, 0);
+	  }
         }
         program_memory[e->count_addr] = 5;
         e->state = ENEMY_STATE_BLOWUP;
@@ -1019,12 +1019,12 @@ void game_loop(void)
       if (c > 0x10) {
         if (game_mode == GAME_MODE_SINGLE) {
           if (program_memory[0] == 0) {
-	  	ai_place_program(0);
-                program_memory[0] = get_random_byte(6);
+	    ai_place_program(0);
+	    program_memory[0] = get_random_byte(6);
           }
           else {
-             program_memory[0]--;
-             program_memory_updated = 1;
+	    program_memory[0]--;
+	    program_memory_updated = 1;
           }
         }
         if (gameover_check()) {
