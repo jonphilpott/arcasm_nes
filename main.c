@@ -27,7 +27,7 @@
 /*{pal:"nes",layout:"nes"}*/
 const char PALETTE[32] =
   { 
-   0x0C,			// screen color
+   0x12,			// screen color
    
    0x21,0x00,0x30,0x00,	// background palette 0
    0x1C,0x20,0x2C,0x00,	// background palette 1
@@ -37,7 +37,7 @@ const char PALETTE[32] =
    0x16,0x35,0x24,0x00,	// sprite palette 0
    0x00,0x37,0x25,0x00,	// sprite palette 1
    0x0D,0x2D,0x15,0x00,	// sprite palette 2
-   0x0D,0x2D,0x27	// sprite palette 3
+   0x0D,0x00,0x27	// sprite palette 3
   };
 
 static byte program_memory[MEM_BYTES];
@@ -565,14 +565,22 @@ void handle_player_input()
   byte mem_x_offset = 0;
   byte opponent = 1;
   for (i=0; i<2; i++) {
+    pad = pad_poll(i);
+    
+    if ((pad & (PAD_START | PAD_SELECT)) == (PAD_START | PAD_SELECT)) {
+      	game_state = GAME_STATE_INTRO;
+        return;
+    }
+    
     if (players[i].state == PLAYER_STATE_ACTIVE) {
       opponent = opponent - i;  
       
       x = players[i].x;
       y = players[i].y;
       // neslib says check triggers first    
-      pad = pad_poll(i);
-    
+      
+
+      
       if (pad & (PAD_A | PAD_B)) {
 	// add some entropy to the LFSR.
       	lfsr = lfsr | 1;
@@ -634,7 +642,6 @@ void handle_player_input()
 	      sfx_value_change();
 
 	    }
-	    
 	  }
         }
           
@@ -683,6 +690,22 @@ void handle_sprites()
   players[1].x += players[1].dx;
   players[1].y += players[1].dy;
   
+    // draw them
+  if (players[0].state == PLAYER_STATE_ACTIVE) {
+    oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
+  }
+  else if (players[0].state == PLAYER_STATE_BLOWNUP) {
+    oam_id = oam_spr(players[0].x, players[0].y, 1 + (players[0].count >> 4), 0, oam_id); 
+  }
+  
+  if (players[1].state == PLAYER_STATE_ACTIVE) {
+    oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
+  }
+  else if (players[1].state == PLAYER_STATE_BLOWNUP) {
+    oam_id = oam_spr(players[1].x, players[1].y, 1 + (players[1].count >> 4), 0, oam_id);
+	
+  }
+  
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
     if (enemies[i].state != ENEMY_STATE_INACTIVE) {
       enemies[i].x += enemies[i].dx;
@@ -704,24 +727,6 @@ void handle_sprites()
 		     2+i,
 		     oam_id,
 		     );
-  }
-  
-  
-  
-  // draw them
-  if (players[0].state == PLAYER_STATE_ACTIVE) {
-    oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
-  }
-  else if (players[0].state == PLAYER_STATE_BLOWNUP) {
-    oam_id = oam_spr(players[0].x, players[0].y, 1 + (players[0].count >> 4), 0, oam_id); 
-  }
-  
-  if (players[1].state == PLAYER_STATE_ACTIVE) {
-    oam_id = oam_spr(players[1].x, players[1].y, 0x91, 0, oam_id);
-  }
-  else if (players[1].state == PLAYER_STATE_BLOWNUP) {
-    oam_id = oam_spr(players[1].x, players[1].y, 1 + (players[1].count >> 4), 0, oam_id);
-	
   }
 
   if (oam_id!=0) oam_hide_rest(oam_id);
@@ -972,6 +977,11 @@ void game_loop(void)
 {
   byte t = 0;
   byte c = 0;
+  
+  
+  clrscr();
+  setup_graphics();
+  
   draw_gameloop_bg();
   
   reset_memory();
@@ -992,7 +1002,7 @@ void game_loop(void)
   draw_cpu_thread(23, 4, &cpu_threads[1]);
   
 
-  while (1) 
+  while (game_state == GAME_STATE_GAME) 
     {
       if (redraw_cpu) {
         redraw_cpu = 0;
@@ -1062,7 +1072,6 @@ void main(void)
   
   // main loop
   while(1) {
-    foo = get_random_byte(2);
     switch (game_state) 
       {
       case GAME_STATE_INTRO:
@@ -1070,7 +1079,6 @@ void main(void)
         game_state = GAME_STATE_GAME;
         break;
       case GAME_STATE_GAME:
-        setup_graphics();
         game_loop();
         game_state = GAME_STATE_INTRO;
         break;
