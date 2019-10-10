@@ -285,11 +285,10 @@ void cpu_tick(byte thread)
   byte owner  = program_memory_meta[pc];
   byte pc_mod = 0;
   
-  if (t->prev_owner != owner) {
+  if (t->prev_owner != owner && 
+      (owner == 1 && owner == 2)) {
     score_up(owner-1, PLAYER_SCORE_CPU_TAKEOVER);
   }
-  
-  t->prev_owner = owner;
   
   switch (opcode) {
   case OPCODE_NOP:
@@ -361,10 +360,21 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_RCP:
     // stupidly OP instruction, but here so we can implement IMP like.
-    cpu_mem_write(owner, t->x,   program_memory[pc + ((sbyte) arg)]);
-    cpu_mem_write(owner, t->x+1, program_memory[pc + ((sbyte) arg)+1]);
+    cpu_mem_write(owner, pc + t->x,   program_memory[pc + ((sbyte) arg)]);
+    cpu_mem_write(owner, pc + t->x+1, program_memory[pc + ((sbyte) arg)+1]);
     break;
+  default:
+    pc_mod = 1;
+    t->pc = 0x2;
+    
+    if ((owner == 1 || owner == 2) && 
+        (t->prev_owner == 1 || t->prev_owner == 2) &&
+        owner != t->prev_owner) {
+    	score_up(owner-1, PLAYER_SCORE_CPU_BOMB);
+    }
   }
+  
+  t->prev_owner = owner;
   
   if (pc_mod == 0) {
     t->pc += 2;
