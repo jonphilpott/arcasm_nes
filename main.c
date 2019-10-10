@@ -29,20 +29,19 @@ const char PALETTE[32] =
   { 
    0x0F,			// screen color
    
-   0x21,0x25,0x30,0x00,	// background palette 0
-   0x1C,0x20,0x2C,0x00,	// background palette 1
-   0x00,0x10,0x20,0x00,	// background palette 2
-   0x06,0x16,0x26,0x00,   // background palette 3
+   0x21,0x25,0x30,0x00,		// background palette 0
+   0x1C,0x20,0x2C,0x00,		// background palette 1
+   0x00,0x10,0x20,0x00,		// background palette 2
+   0x06,0x16,0x26,0x00,		// background palette 3
 
-   0x16,0x35,0x24,0x00,	// sprite palette 0
-   0x00,0x37,0x25,0x00,	// sprite palette 1
-   0x0D,0x2D,0x3A,0x00,	// sprite palette 2
-   0x0D,0x27,0x2A	// sprite palette 3
+   0x16,0x35,0x24,0x00,		// sprite palette 0
+   0x00,0x37,0x25,0x00,		// sprite palette 1
+   0x0D,0x2D,0x3A,0x00,		// sprite palette 2
+   0x0D,0x27,0x2A		// sprite palette 3
   };
 
 static byte program_memory[MEM_BYTES];
 static byte program_memory_meta[MEM_BYTES];
-//static byte program_block_flags[NUMBER_OF_BLOCKS];
 
 static byte program_memory_touched = 0;
 static byte program_memory_updated = 0;
@@ -225,17 +224,15 @@ void reset_memory()
 {
   byte i;
   memfill(program_memory, 0, MEM_BYTES);
-  //memfill(program_block_flags, 0, NUMBER_OF_BLOCKS);
   memfill(program_memory_meta, 0, MEM_BYTES);
   program_memory_touched = 0;
   
-  players[0].state = PLAYER_STATE_ACTIVE;
-  players[1].state = PLAYER_STATE_ACTIVE;
-  
+  players[0].state	   = PLAYER_STATE_ACTIVE;
+  players[1].state	   = PLAYER_STATE_ACTIVE;  
   players[0].current_block = get_random_byte(4);
   players[1].current_block = get_random_byte(4);
-  players[0].score = 0x0;
-  players[1].score = 0x0;
+  players[0].score	   = 0x0;
+  players[1].score	   = 0x0;
   
   players[0].x = players[0].y = 40;
   players[1].x = players[1].y = 80;
@@ -255,12 +252,12 @@ void reset_memory()
   }
     
   for (i = 0 ; i < MAX_ENEMIES; i++) {
-    enemies[i].dx = 0;
-    enemies[i].dy = 0;
-    enemies[i].x = get_random_byte(8);
-    enemies[i].y = get_random_byte(8);
+    enemies[i].dx	  = 0;
+    enemies[i].dy	  = 0;
+    enemies[i].x	  = get_random_byte(8);
+    enemies[i].y	  = get_random_byte(8);
     enemies[i].count_addr = get_random_byte(8);
-    enemies[i].state = ENEMY_STATE_INACTIVE;
+    enemies[i].state	  = ENEMY_STATE_INACTIVE;
   }
 }
 
@@ -575,34 +572,34 @@ void handle_player_input()
           }
           
           
-	    if (pad & PAD_B) {
-	      program_memory[addr] = 0;
+	  if (pad & PAD_B) {
+	    program_memory[addr] = 0;
+	  }
+	  else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
+	    if (program_memory_meta[addr] != (1 + i)) {
+	      score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
+	      update_memory_ownership(addr, 1+i);
 	    }
-	    else if (pad & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
-	      if (program_memory_meta[addr] != (1 + i)) {
-		score_up(i, PLAYER_SCORE_CURSOR_MEMEDIT);
-		update_memory_ownership(addr, 1+i);
-	      }
 
-	      if (pad & PAD_UP) {
-		program_memory[addr]++;
-		sfx_value_change();
-	      }
-	      else if (pad & PAD_DOWN) {
-		program_memory[addr]--;
-		sfx_value_change();
+	    if (pad & PAD_UP) {
+	      program_memory[addr]++;
+	      sfx_value_change();
+	    }
+	    else if (pad & PAD_DOWN) {
+	      program_memory[addr]--;
+	      sfx_value_change();
 
-	      }
-	      else if (pad & PAD_LEFT) {
-		program_memory[addr] <<= 1;
-		sfx_value_change();
+	    }
+	    else if (pad & PAD_LEFT) {
+	      program_memory[addr] <<= 1;
+	      sfx_value_change();
 
-	      }
-	      else if (pad & PAD_RIGHT) {
-		program_memory[addr] >>= 1;
-		sfx_value_change();
+	    }
+	    else if (pad & PAD_RIGHT) {
+	      program_memory[addr] >>= 1;
+	      sfx_value_change();
 
-	      }
+	    }
 	    
 	  }
         }
@@ -764,13 +761,14 @@ void draw_gameover(void)
   }
 }
 
-const char bg_row[32] = {
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
-};
+const char bg_row[32] =
+  {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+   0x8D, 
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+   0x8D, 
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+  };
 
 
 void draw_gameloop_bg()
@@ -847,31 +845,31 @@ void handle_enemies()
   
   enemy_delay_ctr++;
   
-   if (enemy_delay_ctr > 0x4) {
-      program_memory[e->count_addr]--;
-      program_memory_updated = 1;
-      enemy_delay_ctr = 0;
-    }
+  if (enemy_delay_ctr > 0x4) {
+    program_memory[e->count_addr]--;
+    program_memory_updated = 1;
+    enemy_delay_ctr = 0;
+  }
   
   for (i = 0 ; i < MAX_ENEMIES ; i++) {
     e = &enemies[i];
     
     
-      if (e->state == ENEMY_STATE_ACTIVE) {
-	      if (e->x < 0x54) {
-		e->dx = i+1;
-      	}
-     	 else if (e->x > 0xa9) {
-		e->dx = -1;
-      	}
-          
-      	if (e->y < 37) {
-		e->dy = i+1;
-      	}
-      	else if (e->y > 188) {
-		e->dy = -1;
-      	}
+    if (e->state == ENEMY_STATE_ACTIVE) {
+      if (e->x < 0x54) {
+	e->dx = i+1;
       }
+      else if (e->x > 0xa9) {
+	e->dx = -1;
+      }
+          
+      if (e->y < 37) {
+	e->dy = i+1;
+      }
+      else if (e->y > 188) {
+	e->dy = -1;
+      }
+    }
     
     if (program_memory[e->count_addr] == 0) {
       if (e->state == ENEMY_STATE_INACTIVE) {
@@ -892,15 +890,16 @@ void handle_enemies()
         
         if (BETWEEN(e->x, 0x56, 0xB2) &&
 	    BETWEEN(e->y, 0x2E, 0x8F)) {
-	    byte current_block = 
-	      ((e->y - 0x2E) / 24) * 4 + 
-	      ((e->x - 0x56) / 24);
+	  
+	  byte current_block = 
+	    ((e->y - 0x2E) / 24) * 4 + 
+	    ((e->x - 0x56) / 24);
         
-      	for (x = 0; x < BYTES_PER_BLOCK ; x++) {
-                byte a = (current_block * BYTES_PER_BLOCK) + x;
-       		program_memory[a] = 0;
-          	update_memory_ownership(a, 0);
-        }
+	  for (x = 0; x < BYTES_PER_BLOCK ; x++) {
+	    byte a = (current_block * BYTES_PER_BLOCK) + x;
+	    program_memory[a] = 0;
+	    update_memory_ownership(a, 0);
+	  }
         }
         program_memory[e->count_addr] = 5;
         e->state = ENEMY_STATE_BLOWUP;
@@ -980,12 +979,12 @@ void game_loop(void)
       if (c > 0x10) {
         if (game_mode == GAME_MODE_SINGLE) {
           if (program_memory[0] == 0) {
-	  	ai_place_program(0);
-                program_memory[0] = get_random_byte(6);
+	    ai_place_program(0);
+	    program_memory[0] = get_random_byte(6);
           }
           else {
-             program_memory[0]--;
-             program_memory_updated = 1;
+	    program_memory[0]--;
+	    program_memory_updated = 1;
           }
         }
         if (gameover_check()) {
