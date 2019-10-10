@@ -567,8 +567,6 @@ void handle_player_input()
 	    addr++;
           }
           
-          if (!(game_mode == GAME_MODE_SINGLE && 
-                program_memory_meta[addr] == 2)) {
           
 	    if (pad & PAD_B) {
 	      program_memory[addr] = 0;
@@ -598,7 +596,7 @@ void handle_player_input()
 		sfx_value_change();
 
 	      }
-	    }
+	    
 	  }
         }
           
