@@ -284,6 +284,7 @@ void cpu_tick(byte thread)
   byte arg    = program_memory[pc + 1];
   byte owner  = program_memory_meta[pc];
   byte pc_mod = 0;
+  byte tmp = 0;
   
   if (t->prev_owner != owner && 
       (owner == 1 && owner == 2)) {
@@ -341,7 +342,7 @@ void cpu_tick(byte thread)
     t->a = (t->a << arg);
     break;
   case OPCODE_INCA:
-    t->a = (t->a + arg);
+    t->a = (t->a + (sbyte) arg);
     break;
   case OPCODE_TAX:
     t->x = t->a;
@@ -362,6 +363,22 @@ void cpu_tick(byte thread)
     // stupidly OP instruction, but here so we can implement IMP like.
     cpu_mem_write(owner, pc + t->x,   program_memory[pc + ((sbyte) arg)]);
     cpu_mem_write(owner, pc + t->x+1, program_memory[pc + ((sbyte) arg)+1]);
+    break;
+  case OPCODE_XYS:
+    tmp = t->x;
+    t->x = t->y;
+    t->x = tmp;
+    break;
+  case OPCODE_AXS:
+    tmp = t->x;
+    t->x = t->a;
+    t->a = tmp;
+    break;
+  case OPCODE_CAX:
+    if (program_memory[t->x] == t->a) {
+    	pc_mod = 1;
+        t->pc += 0x4;
+    }
     break;
   default:
     pc_mod = 1;
