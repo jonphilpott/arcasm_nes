@@ -380,8 +380,8 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_CAX:
     if (program_memory[t->x] == t->a) {
-    	pc_mod = 1;
-        t->pc += 0x4;
+      pc_mod = 1;
+      t->pc += 0x4;
     }
     break;
   case OPCODE_LDW:
@@ -403,7 +403,7 @@ void cpu_tick(byte thread)
     if ((owner == 1 || owner == 2) && 
         (t->prev_owner == 1 || t->prev_owner == 2) &&
         owner != t->prev_owner) {
-    	score_up(owner-1, PLAYER_SCORE_CPU_BOMB);
+      score_up(owner-1, PLAYER_SCORE_CPU_BOMB);
     }
   }
   
@@ -603,8 +603,8 @@ void handle_player_input()
     pad = pad_poll(i);
     
     if ((pad & (PAD_START | PAD_SELECT)) == (PAD_START | PAD_SELECT)) {
-      	game_state = GAME_STATE_INTRO;
-        return;
+      game_state = GAME_STATE_INTRO;
+      return;
     }
     
     if (players[i].state == PLAYER_STATE_ACTIVE) {
@@ -725,7 +725,7 @@ void handle_sprites()
   players[1].x += players[1].dx;
   players[1].y += players[1].dy;
   
-    // draw them
+  // draw them
   if (players[0].state == PLAYER_STATE_ACTIVE) {
     oam_id = oam_spr(players[0].x, players[0].y, 0x90, 0, oam_id);
   }
@@ -860,13 +860,13 @@ void draw_gameover(void)
 }
 
 const char bg_row[32] = 
-{
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
-			 0x8D, 
-			 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
-};
+  {
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+   0x8D, 
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+   0x8D, 
+   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0, 0x00, 0x00, 
+  };
 
 
 void draw_gameloop_bg()
@@ -883,10 +883,10 @@ void draw_gameloop_bg()
   
   vram_adr(NTADR_A(8, 26));
   if (game_victory_style == 1) {
-     vram_write("WATCHDOG: ", 10);
+    vram_write("WATCHDOG: ", 10);
   }
   else {
-     vram_write("FREE MEM: ", 10);
+    vram_write("FREE MEM: ", 10);
   }
   
   vram_adr(NTADR_A(1, 3));
@@ -1015,14 +1015,14 @@ void handle_enemies()
 byte gameover_check()
 {
   if (game_victory_style == 1) {
-	  if (watchdog == 0) {
-	    return true;
-	  }
+    if (watchdog == 0) {
+      return true;
+    }
   }
   else {
-  	if (free_memory_count_last == 0) {
-        	return true;
-        }
+    if (free_memory_count_last == 0) {
+      return true;
+    }
   }
   
   return false;
