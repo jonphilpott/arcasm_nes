@@ -74,6 +74,7 @@ static struct player_state players[2];
 
 static byte game_state = 0;
 static byte game_mode = 0;
+static byte game_victory_style = 0;
 static byte watchdog = 255;
 
 struct cpu_regs {
@@ -271,6 +272,8 @@ void reset_memory()
     enemies[i].count_addr = get_random_byte(8);
     enemies[i].state = ENEMY_STATE_INACTIVE;
   }
+  
+  game_victory_style = GAME_VICTORY_STYLE;
   
   free_memory_count_last = 255;
   watchdog = 255;
@@ -475,8 +478,7 @@ byte title_screen(void)
   vram_write("> Z6580 CPU SYSTEM", 18);
     
   while (1) {
-
-    //by1 = get_random_byte(8);
+    get_random_byte(1);
     by2 = pad_trigger(0) | pad_trigger(1);
     if (by2 & PAD_SELECT) {
       if (mode) { mode = 0; }
@@ -805,16 +807,21 @@ void draw_status()
 {
   memfill(C_BUF, 0, 10);
   itoa(players[0].score, C_BUF, 16);
-  
   vrambuf_put(NTADR_A(19, 1), C_BUF, 8);
+  
   memfill(C_BUF, 0, 10);
   itoa(players[1].score, C_BUF, 16);
   vrambuf_put(NTADR_A(19, 2), C_BUF, 8);
   
   memfill(C_BUF, 0, 10);
-  itoa(watchdog, C_BUF, 16);
-  vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
-
+  if (game_victory_style == 1) {
+    itoa(watchdog, C_BUF, 16);
+    vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
+  }
+  else {
+    itoa(free_memory_count_last, C_BUF, 16);
+    vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
+  }
   
   ppu_wait_frame();
   vrambuf_clear();
@@ -875,7 +882,12 @@ void draw_gameloop_bg()
   vram_write("P2 SCORE:", 9);
   
   vram_adr(NTADR_A(8, 26));
-  vram_write("WATCHDOG: ", 10);
+  if (game_victory_style == 1) {
+     vram_write("WATCHDOG: ", 10);
+  }
+  else {
+     vram_write("FREE MEM: ", 10);
+  }
   
   vram_adr(NTADR_A(1, 3));
   vram_fill(0x8F, 30);
@@ -1002,8 +1014,15 @@ void handle_enemies()
 
 byte gameover_check()
 {
-  if (watchdog == 0) {
-    return true;
+  if (game_victory_style == 1) {
+	  if (watchdog == 0) {
+	    return true;
+	  }
+  }
+  else {
+  	if (free_memory_count_last == 0) {
+        	return true;
+        }
   }
   
   return false;
@@ -1018,9 +1037,10 @@ void game_loop(void)
   clrscr();
   setup_graphics();
   
+  reset_memory();
+  
   draw_gameloop_bg();
   
-  reset_memory();
   
   // clear vram buffer
   vrambuf_clear();
@@ -1052,7 +1072,7 @@ void game_loop(void)
       if (program_memory_updated) {
 	draw_mem(1,  8, &players[0]);
 	draw_mem(23, 8, &players[1]);
-        //update_free_memory_count();
+        update_free_memory_count();
 	program_memory_updated = 0;
       }
 

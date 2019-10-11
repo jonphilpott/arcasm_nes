@@ -30,6 +30,8 @@
 #define GAME_MODE_SINGLE    0
 #define GAME_MODE_DUAL      1
 
+#define GAME_VICTORY_STYLE  (get_random_byte(1) & 1)
+
 
 // regular instructions
 #define OPCODE_NOP  0x00
