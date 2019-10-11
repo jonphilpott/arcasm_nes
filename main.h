@@ -1,5 +1,5 @@
-#define PLAYER_SCORE_CPU_BOMB       (32)
-#define PLAYER_SCORE_CPU_TAKEOVER   (16)
+#define PLAYER_SCORE_CPU_BOMB       (64)
+#define PLAYER_SCORE_CPU_TAKEOVER   (32)
 #define PLAYER_SCORE_MEM_WRITE      (4)
 #define PLAYER_SCORE_CURSOR_DESTROY (2)
 #define PLAYER_SCORE_CURSOR_MEMEDIT (1)
@@ -49,7 +49,7 @@
 #define OPCODE_WLD  0x0C
 #define OPCODE_WCP  0x0D
 #define OPCODE_MEMW 0x0E
-#define OPCODE_RND  0x0F
+#define OPCODE_RND  0x0F 
 #define OPCODE_TAP  0x10
 #define OPCODE_RSH  0x11
 #define OPCODE_LSH  0x12
@@ -60,6 +60,7 @@
 
 // stupid insrtructions
 #define OPCODE_RCP  0x42
+#define OPCODE_LDW  0x3D
 
 
 
