@@ -72,10 +72,10 @@ struct enemy enemies[MAX_ENEMIES];
 static struct player_state players[2];
 
 
-static byte game_state = 0;
-static byte game_mode = 0;
-static byte game_victory_style = 0;
-static byte watchdog = 255;
+static byte	game_state	   = 0;
+static byte	game_mode	   = 0;
+static byte	game_victory_style = 0;
+static byte	watchdog	   = 255;
 
 struct cpu_regs {
   byte a, x, y, pc;
@@ -426,42 +426,42 @@ void __fastcall__ play_music(void)
 {
   static const int bass_notes[] =
     { 
-	0x17c,
-    	0x13f,
-	0x17c,
-	0x0fd,
-	0x17c,
-	0x0d2,
-	0x17c,
-	0x13f,
-	0x17c,
-	0x0fd,
-	0x17c,
-	0x0d2,
-	0x17c,
-	0x13f,
-	0x17c,
-    	0x1ab,
+     0x17c,
+     0x13f,
+     0x17c,
+     0x0fd,
+     0x17c,
+     0x0d2,
+     0x17c,
+     0x13f,
+     0x17c,
+     0x0fd,
+     0x17c,
+     0x0d2,
+     0x17c,
+     0x13f,
+     0x17c,
+     0x1ab,
     };
   
-    static const int treb_notes[] =
+  static const int treb_notes[] =
     { 
-	0x17c,
-      	0x17c,
-      	0x11c,
-	0x13f,
-	0x152,
-	0x17c,
-	0x17c,
-	0x13f,
-	0x152,
-	0x13f,
-	0x0fd,
-	0x0e2,
-	0x11c,
-	0x13f,
-      	0x1ab,
-      	0x193,
+     0x17c,
+     0x17c,
+     0x11c,
+     0x13f,
+     0x152,
+     0x17c,
+     0x17c,
+     0x13f,
+     0x152,
+     0x13f,
+     0x0fd,
+     0x0e2,
+     0x11c,
+     0x13f,
+     0x1ab,
+     0x193,
     };
   
   static byte m_ptr = 0;
@@ -470,11 +470,11 @@ void __fastcall__ play_music(void)
 
   APU_TRIANGLE_LENGTH(bass_notes[m_ptr & 0xF], 2);
   APU_PULSE_DECAY(
-    1,
-    treb_notes[m_ptr & 0xF], 
-    DUTY_75,
-    2, 
-    10);
+		  1,
+		  treb_notes[m_ptr & 0xF], 
+		  DUTY_75,
+		  2, 
+		  10);
   APU_PULSE_SET_VOLUME(1, DUTY_75, 3);
   
   m_ptr++;
