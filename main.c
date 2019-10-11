@@ -480,7 +480,7 @@ byte title_screen(void)
   while (1) {
     get_random_byte(1);
     by2 = pad_trigger(0) | pad_trigger(1);
-    if (by2 & PAD_SELECT) {
+    if (by2 & (PAD_UP | PAD_DOWN | PAD_SELECT)) {
       if (mode) { mode = 0; }
       else { mode = 1; }
     }
