@@ -73,8 +73,8 @@ static struct player_state players[2];
 
 
 static byte game_state = 0;
-
 static byte game_mode = 0;
+static byte watchdog = 255;
 
 struct cpu_regs {
   byte a, x, y, pc;
@@ -102,12 +102,12 @@ byte get_random_byte(byte rounds)
 /// SOUND EFFECTS
 void sfx_cpu_tick_snare()
 {
-  APU_NOISE_DECAY(10, 4, 4);
+  APU_NOISE_DECAY(10, 4, 1);
 }
 
 void sfx_cpu_tick_kick()
 {
-  APU_NOISE_DECAY(100, 0, 0);
+  APU_NOISE_DECAY(100, 1, 2);
 }
 
 void sfx_cursor_destroy()
@@ -216,7 +216,7 @@ void ai_place_program(byte force)
   
   if (violated) {
     last_program_location = get_random_byte(7) << 1;
-    last_program_number   = get_random_byte(3);
+    last_program_number   = get_random_byte(2);
     
     for (i = 0 ; i < 16 ; i++) {
       cpu_mem_write(2, last_program_location + i, 
@@ -273,6 +273,7 @@ void reset_memory()
   }
   
   free_memory_count_last = 255;
+  watchdog = 255;
 }
 
 void cpu_tick(byte thread)
@@ -284,6 +285,7 @@ void cpu_tick(byte thread)
   byte arg    = program_memory[pc + 1];
   byte owner  = program_memory_meta[pc];
   byte pc_mod = 0;
+  byte tmp = 0;
   
   if (t->prev_owner != owner && 
       (owner == 1 && owner == 2)) {
@@ -296,8 +298,8 @@ void cpu_tick(byte thread)
   case OPCODE_LDA:
     t->a = arg;
     break;
-  case OPCODE_STA:
-    cpu_mem_write(owner, arg, t->a);
+  case OPCODE_LDX:
+    t->x = arg;
     break;
   case OPCODE_HOP:
     pc_mod = 1;
@@ -323,7 +325,7 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_MEMW:
     pc_mod = 1;
-    if (program_memory[arg] == t->a) {
+    if (program_memory[t->x] != t->a) {
       t->pc += 2;
     }
     break;
@@ -341,7 +343,7 @@ void cpu_tick(byte thread)
     t->a = (t->a << arg);
     break;
   case OPCODE_INCA:
-    t->a = (t->a + arg);
+    t->a = (t->a + (sbyte) arg);
     break;
   case OPCODE_TAX:
     t->x = t->a;
@@ -362,6 +364,34 @@ void cpu_tick(byte thread)
     // stupidly OP instruction, but here so we can implement IMP like.
     cpu_mem_write(owner, pc + t->x,   program_memory[pc + ((sbyte) arg)]);
     cpu_mem_write(owner, pc + t->x+1, program_memory[pc + ((sbyte) arg)+1]);
+    break;
+  case OPCODE_XYS:
+    tmp = t->x;
+    t->x = t->y;
+    t->y = tmp;
+    break;
+  case OPCODE_AXS:
+    tmp = t->x;
+    t->x = t->a;
+    t->a = tmp;
+    break;
+  case OPCODE_CAX:
+    if (program_memory[t->x] == t->a) {
+    	pc_mod = 1;
+        t->pc += 0x4;
+    }
+    break;
+  case OPCODE_LDW:
+    watchdog = get_random_byte(8);
+    break;
+  case OPCODE_AND:
+    t->a = t->a & arg;
+    break;
+  case OPCODE_TPX:
+    t->x = t->pc;
+    break;
+  case OPCODE_TXP:
+    t->pc = t->x;
     break;
   default:
     pc_mod = 1;
@@ -407,7 +437,7 @@ void __fastcall__ play_music(void)
   int note = notes[m_ptr & 0xF];
   
 
-  APU_TRIANGLE_LENGTH(note*2, 5);
+  APU_TRIANGLE_LENGTH(note*2, 2);
 
   
   m_ptr++;
@@ -438,9 +468,12 @@ byte title_screen(void)
     
   vram_adr(NTADR_A(11, 16));
   vram_write("DUEL", 4);
-    
-  vram_adr(NTADR_A(10, 10));
+      
+  ppu_wait_frame();
   
+  vram_adr(NTADR_A(2, 26));
+  vram_write("> Z6580 CPU SYSTEM", 18);
+    
   while (1) {
 
     //by1 = get_random_byte(8);
@@ -747,7 +780,7 @@ void __fastcall__ maybe_cpu_tick(void)
   handle_sprites();
   
   if (frame_count == GAME_LOOPS_PER_TICK/2) {
-    play_music();
+    //play_music();
   }
     
   if (frame_count > GAME_LOOPS_PER_TICK) {
@@ -761,7 +794,7 @@ void __fastcall__ maybe_cpu_tick(void)
     }
     frame_count = 0;
     redraw_cpu = 1;
-    play_music();
+    //play_music();
   }
   
   
@@ -779,8 +812,8 @@ void draw_status()
   vrambuf_put(NTADR_A(19, 2), C_BUF, 8);
   
   memfill(C_BUF, 0, 10);
-  itoa(free_memory_count_last, C_BUF, 10);
-  vrambuf_put(NTADR_A(21, 26), C_BUF, 8);
+  itoa(watchdog, C_BUF, 16);
+  vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
 
   
   ppu_wait_frame();
@@ -839,7 +872,7 @@ void draw_gameloop_bg()
   vram_write("P2 SCORE:", 9);
   
   vram_adr(NTADR_A(8, 26));
-  vram_write("FREE MEMORY:", 12);
+  vram_write("WATCHDOG: ", 10);
   
   vram_adr(NTADR_A(1, 3));
   vram_fill(0x8F, 30);
@@ -966,7 +999,7 @@ void handle_enemies()
 
 byte gameover_check()
 {
-  if (free_memory_count_last == 0) {
+  if (watchdog == 0) {
     return true;
   }
   
@@ -1016,7 +1049,7 @@ void game_loop(void)
       if (program_memory_updated) {
 	draw_mem(1,  8, &players[0]);
 	draw_mem(23, 8, &players[1]);
-        update_free_memory_count();
+        //update_free_memory_count();
 	program_memory_updated = 0;
       }
 
@@ -1034,7 +1067,7 @@ void game_loop(void)
         }
       }
     
-      APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
+      //APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
       ppu_wait_frame();
     
       if (c > 0x10) {
@@ -1053,6 +1086,7 @@ void game_loop(void)
 	  draw_gameover();
 	  return;
         }
+        watchdog--;
         c = 0;
       }
     
