@@ -72,7 +72,7 @@ struct enemy enemies[MAX_ENEMIES];
 static struct player_state players[2];
 
 
-static byte game_state = 0;
+static byte game_state = 1;
 static byte game_mode = 0;
 static byte game_victory_style = 0;
 static byte watchdog = 255;
@@ -424,24 +424,58 @@ void cpu_tick(byte thread)
 // muzakery
 void __fastcall__ play_music(void)
 {
-  static const int notes[] =
+  static const int bass_notes[] =
     { 
-     268, 239, 225, 
-     201, 189, 179, 
-     168, 159, 142, 
-     134, 112, 239, 
-     213, 201, 189,
-     225
+	0x17c,
+    	0x13f,
+	0x17c,
+	0x0fd,
+	0x17c,
+	0x0d2,
+	0x17c,
+	0x13f,
+	0x17c,
+	0x0fd,
+	0x17c,
+	0x0d2,
+	0x17c,
+	0x13f,
+	0x17c,
+    	0x1ab,
+    };
+  
+    static const int treb_notes[] =
+    { 
+	0x17c,
+      	0x17c,
+      	0x11c,
+	0x13f,
+	0x152,
+	0x17c,
+	0x17c,
+	0x13f,
+	0x152,
+	0x13f,
+	0x0fd,
+	0x0e2,
+	0x11c,
+	0x13f,
+      	0x1ab,
+      	0x193,
     };
   
   static byte m_ptr = 0;
   static byte m_delay = 0;
-  
-  int note = notes[m_ptr & 0xF];
-  
+    
 
-  APU_TRIANGLE_LENGTH(note*2, 2);
-
+  APU_TRIANGLE_LENGTH(bass_notes[m_ptr & 0xF], 2);
+  APU_PULSE_DECAY(
+    1,
+    treb_notes[m_ptr & 0xF], 
+    DUTY_50,
+    2, 
+    10);
+  APU_PULSE_SET_VOLUME(1, DUTY_50, 4);
   
   m_ptr++;
 }
@@ -782,7 +816,7 @@ void __fastcall__ maybe_cpu_tick(void)
   handle_sprites();
   
   if (frame_count == GAME_LOOPS_PER_TICK/2) {
-    //play_music();
+    play_music();
   }
     
   if (frame_count > GAME_LOOPS_PER_TICK) {
@@ -796,7 +830,7 @@ void __fastcall__ maybe_cpu_tick(void)
     }
     frame_count = 0;
     redraw_cpu = 1;
-    //play_music();
+    play_music();
   }
   
   
