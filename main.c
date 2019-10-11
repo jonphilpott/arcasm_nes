@@ -835,6 +835,9 @@ void draw_gameover(void)
     if (players[0].score > players[1].score) {
       vrambuf_put(NTADR_A(10, 25), "PLAYER 1 WINS", 13);
     }
+    else if (players[0].score == players[1].score) {
+      vrambuf_put(NTADR_A(10, 25), "YOU BOTH SUCK", 14);
+    }
     else {
       vrambuf_put(NTADR_A(10, 25), "PLAYER 2 WINS", 13);
     }
@@ -845,7 +848,7 @@ void draw_gameover(void)
   vrambuf_clear();
   
   while (1) {
-    if (pad_trigger(0) & PAD_START) break;
+    if ((pad_trigger(0) | pad_trigger(1)) & PAD_START) break;
   }
 }
 
