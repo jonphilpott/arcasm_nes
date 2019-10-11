@@ -216,7 +216,7 @@ void ai_place_program(byte force)
   
   if (violated) {
     last_program_location = get_random_byte(7) << 1;
-    last_program_number   = get_random_byte(3);
+    last_program_number   = get_random_byte(2);
     
     for (i = 0 ; i < 16 ; i++) {
       cpu_mem_write(2, last_program_location + i, 
@@ -298,8 +298,8 @@ void cpu_tick(byte thread)
   case OPCODE_LDA:
     t->a = arg;
     break;
-  case OPCODE_STA:
-    cpu_mem_write(owner, arg, t->a);
+  case OPCODE_LDX:
+    t->x = arg;
     break;
   case OPCODE_HOP:
     pc_mod = 1;
@@ -325,7 +325,7 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_MEMW:
     pc_mod = 1;
-    if (program_memory[arg] == t->a) {
+    if (program_memory[t->x] != t->a) {
       t->pc += 2;
     }
     break;
@@ -383,6 +383,15 @@ void cpu_tick(byte thread)
     break;
   case OPCODE_LDW:
     watchdog = get_random_byte(8);
+    break;
+  case OPCODE_AND:
+    t->a = t->a & arg;
+    break;
+  case OPCODE_TPX:
+    t->x = t->pc;
+    break;
+  case OPCODE_TXP:
+    t->pc = t->x;
     break;
   default:
     pc_mod = 1;
