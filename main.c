@@ -72,7 +72,7 @@ struct enemy enemies[MAX_ENEMIES];
 static struct player_state players[2];
 
 
-static byte game_state = 1;
+static byte game_state = 0;
 static byte game_mode = 0;
 static byte game_victory_style = 0;
 static byte watchdog = 255;
@@ -472,10 +472,10 @@ void __fastcall__ play_music(void)
   APU_PULSE_DECAY(
     1,
     treb_notes[m_ptr & 0xF], 
-    DUTY_50,
+    DUTY_75,
     2, 
     10);
-  APU_PULSE_SET_VOLUME(1, DUTY_50, 4);
+  APU_PULSE_SET_VOLUME(1, DUTY_75, 3);
   
   m_ptr++;
 }
