@@ -446,6 +446,7 @@ void __fastcall__ play_music(void)
   
   static const int treb_notes[] =
     { 
+     // measure 1
      0x17c,
      0x17c,
      0x11c,
@@ -462,6 +463,24 @@ void __fastcall__ play_music(void)
      0x13f,
      0x1ab,
      0x193,
+    
+     // measure 2
+     0x17c,
+     0x152,
+     0x13f,
+     0x152,
+     0x11c,
+     0x152,
+     0x13f,
+     0x152,
+     0x0fd,
+     0x152,
+     0x0e2,
+     0x0fd,
+     0x0e2,
+     0x13f,
+     0x1ab,
+     0x193,
     };
   
   static byte m_ptr = 0;
@@ -469,12 +488,17 @@ void __fastcall__ play_music(void)
     
 
   APU_TRIANGLE_LENGTH(bass_notes[m_ptr & 0xF], 2);
+  
+  
+  
   APU_PULSE_DECAY(
 		  1,
-		  treb_notes[m_ptr & 0xF], 
+		  treb_notes[m_ptr & 0x1F], 
 		  DUTY_75,
 		  2, 
 		  10);
+  
+  
   APU_PULSE_SET_VOLUME(1, DUTY_75, 3);
   
   m_ptr++;
@@ -786,8 +810,8 @@ void handle_sprites()
   
   for (i = 0 ; i < 2 ; i++) {
     byte block = cpu_threads[i].pc >> 4;
-    byte by    = 0x30 + ((block >> 2) * 24);
-    byte bx    = 0x60 + ((block &  3) * 24);
+    byte by    = 0x2F + ((block >> 2) * 24);
+    byte bx    = 0x62 + ((block &  3) * 24);
     
     oam_id = oam_spr(
 		     bx,
