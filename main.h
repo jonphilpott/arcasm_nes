@@ -35,31 +35,31 @@
 
 
 // regular instructions
-#define OPCODE_NOP  0x00
-#define OPCODE_LDA  0x01
-#define OPCODE_LDX  0x02
-#define OPCODE_TAX  0x03
-#define OPCODE_TAY  0x04
-#define OPCODE_STAX 0x05
-#define OPCODE_RDX  0x06
-#define OPCODE_INCX 0x07
-#define OPCODE_INCA 0x08
-#define OPCODE_HOP  0x09
-#define OPCODE_JMP  0x0A
-#define OPCODE_ZHOP 0x0B
-#define OPCODE_WLD  0x0C
-#define OPCODE_WCP  0x0D
-#define OPCODE_MEMW 0x0E
-#define OPCODE_RND  0x0F 
-#define OPCODE_TAP  0x10
-#define OPCODE_RSH  0x11
-#define OPCODE_LSH  0x12
-#define OPCODE_XYS  0x13 // -- swap X<->Y
-#define OPCODE_AXS  0x14
+#define OPCODE_NOP  0x00 // do nothing
+#define OPCODE_LDA  0x01 // load argument into A
+#define OPCODE_LDX  0x02 // load argument into X
+#define OPCODE_TAX  0x03 // transfer A->X
+#define OPCODE_TAY  0x04 // transfer A->Y
+#define OPCODE_STAX 0x05 // Store A into address *X
+#define OPCODE_RDX  0x06 // Read address *X into A
+#define OPCODE_INCX 0x07 // Increment X by arg
+#define OPCODE_INCA 0x08 // increment A by arg
+#define OPCODE_HOP  0x09 // Relative Jump (PC = PC + Arg) 
+#define OPCODE_JMP  0x0A // Absolote Jump (PC = Arg)
+#define OPCODE_ZHOP 0x0B // Skip next instruction if A = 0
+#define OPCODE_WLD  0x0C // WIDE LOAD. A = *X, Y=*(X+1)
+#define OPCODE_WCP  0x0D // WIDE COPY *X = A, *(X + 1) = Y
+#define OPCODE_MEMW 0x0E // Mem Wait. Wait until *X != A
+#define OPCODE_RND  0x0F // Load A with Random Number
+#define OPCODE_STXX 0x10 // Store A at **X
+#define OPCODE_RSH  0x11 // Right shift A by ARG places
+#define OPCODE_LSH  0x12 // Left shift A by ARG places
+#define OPCODE_XYS  0x13 // Swap X<->Y
+#define OPCODE_AXS  0x14 // Swap A<->X
 #define OPCODE_CAX  0x15 // compare mem[x] == a, skip eq
-#define OPCODE_AND  0x16
-#define OPCODE_TPX  0x17
-#define OPCODE_TXP  0x18
+#define OPCODE_AND  0x16 // A = A & Arg
+#define OPCODE_TPX  0x17 // Transfer P->X
+#define OPCODE_TXP  0x18 // Transfer X->P
 
 
 // stupid insrtructions

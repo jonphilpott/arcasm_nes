@@ -335,9 +335,8 @@ void cpu_tick(byte thread)
   case OPCODE_RND:
     t->a = get_random_byte(8);
     break;
-  case OPCODE_TAP:
-    t->pc = t->a;
-    pc_mod = 1;
+  case OPCODE_STXX:
+    cpu_mem_write(owner, program_memory[t->x], t->a);
     break;
   case OPCODE_RSH:
     t->a = (t->a >> arg);
