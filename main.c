@@ -664,17 +664,17 @@ void handle_player_input()
   byte mem_x_offset = 0;
   byte opponent = 1;
   
-    pad = pad_trigger(0) | pad_trigger(1);
+  pad = pad_trigger(0) | pad_trigger(1);
   
-      if (pad & PAD_START) {
-    	if (game_state == GAME_STATE_GAME) {
-        	game_state = GAME_STATE_PAUSED;
-          	stop_music();
-        }
-        else if (game_state == GAME_STATE_PAUSED) {
-        	game_state = GAME_STATE_GAME;
-        }
+  if (pad & PAD_START) {
+    if (game_state == GAME_STATE_GAME) {
+      game_state = GAME_STATE_PAUSED;
+      stop_music();
     }
+    else if (game_state == GAME_STATE_PAUSED) {
+      game_state = GAME_STATE_GAME;
+    }
+  }
   
   for (i=0; i<2; i++) {
     pad = pad_poll(i);
@@ -1160,41 +1160,41 @@ void game_loop(void)
       draw_status();
     
       if (game_state == GAME_STATE_GAME) {
-              handle_enemies();
+	handle_enemies();
 
-      for (t = 0; t < 2; t++) {
-      	if (players[t].state == PLAYER_STATE_BLOWNUP) {
-	  players[t].count--;
-	  if (players[t].count == 0) {
-	    players[t].state = PLAYER_STATE_ACTIVE;
+	for (t = 0; t < 2; t++) {
+	  if (players[t].state == PLAYER_STATE_BLOWNUP) {
+	    players[t].count--;
+	    if (players[t].count == 0) {
+	      players[t].state = PLAYER_STATE_ACTIVE;
+	    }
 	  }
-        }
-      }
+	}
     
-      //APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
+	//APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
     
-      if (c > 0x10) {
-        if (game_mode == GAME_MODE_SINGLE) {
-          if (program_memory[0] == 0) {
-	    ai_place_program(0);
-	    program_memory[0] = get_random_byte(6);
-          }
-          else {
-	    program_memory[0]--;
-	    program_memory_updated = 1;
-          }
-        }
-        if (gameover_check()) {
-	  game_state = GAME_STATE_GAMEOVER;
-	  draw_gameover();
-	  return;
-        }
-        watchdog--;
-        c = 0;
-      }
-      else {
-        c++; // geddit???
-      }
+	if (c > 0x10) {
+	  if (game_mode == GAME_MODE_SINGLE) {
+	    if (program_memory[0] == 0) {
+	      ai_place_program(0);
+	      program_memory[0] = get_random_byte(6);
+	    }
+	    else {
+	      program_memory[0]--;
+	      program_memory_updated = 1;
+	    }
+	  }
+	  if (gameover_check()) {
+	    game_state = GAME_STATE_GAMEOVER;
+	    draw_gameover();
+	    return;
+	  }
+	  watchdog--;
+	  c = 0;
+	}
+	else {
+	  c++; // geddit???
+	}
       }
     }
 }
