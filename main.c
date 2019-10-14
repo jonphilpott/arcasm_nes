@@ -504,6 +504,12 @@ void __fastcall__ play_music(void)
   m_ptr++;
 }
 
+void stop_music()
+{
+  APU_TRIANGLE_LENGTH(0, 0);
+  APU_PULSE_DECAY(1, 200, DUTY_25, 1, 10);
+}
+
 void clrscr()
 {
   ppu_off();
@@ -657,6 +663,19 @@ void handle_player_input()
   byte x, y;
   byte mem_x_offset = 0;
   byte opponent = 1;
+  
+    pad = pad_trigger(0) | pad_trigger(1);
+  
+      if (pad & PAD_START) {
+    	if (game_state == GAME_STATE_GAME) {
+        	game_state = GAME_STATE_PAUSED;
+          	stop_music();
+        }
+        else if (game_state == GAME_STATE_PAUSED) {
+        	game_state = GAME_STATE_GAME;
+        }
+    }
+  
   for (i=0; i<2; i++) {
     pad = pad_poll(i);
     
@@ -664,6 +683,8 @@ void handle_player_input()
       game_state = GAME_STATE_INTRO;
       return;
     }
+    
+
     
     if (players[i].state == PLAYER_STATE_ACTIVE) {
       opponent = opponent - i;  
@@ -1116,7 +1137,7 @@ void game_loop(void)
   draw_cpu_thread(23, 4, &cpu_threads[1]);
   
 
-  while (game_state == GAME_STATE_GAME) 
+  while (game_state == GAME_STATE_GAME || game_state == GAME_STATE_PAUSED) 
     {
       if (redraw_cpu) {
         redraw_cpu = 0;
@@ -1135,10 +1156,12 @@ void game_loop(void)
       }
 
       handle_player_input();
-      handle_enemies();
     
       draw_status();
     
+      if (game_state == GAME_STATE_GAME) {
+              handle_enemies();
+
       for (t = 0; t < 2; t++) {
       	if (players[t].state == PLAYER_STATE_BLOWNUP) {
 	  players[t].count--;
@@ -1149,7 +1172,6 @@ void game_loop(void)
       }
     
       //APU_ENABLE(ENABLE_NOISE|ENABLE_PULSE0|ENABLE_PULSE1|ENABLE_TRIANGLE);
-      ppu_wait_frame();
     
       if (c > 0x10) {
         if (game_mode == GAME_MODE_SINGLE) {
@@ -1170,8 +1192,10 @@ void game_loop(void)
         watchdog--;
         c = 0;
       }
-    
-      c++; // geddit???
+      else {
+        c++; // geddit???
+      }
+      }
     }
 }
 

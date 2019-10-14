@@ -26,6 +26,7 @@
 #define GAME_STATE_INTRO    0
 #define GAME_STATE_GAME     1
 #define GAME_STATE_GAMEOVER 2
+#define GAME_STATE_PAUSED   3
 
 #define GAME_MODE_SINGLE    0
 #define GAME_MODE_DUAL      1
