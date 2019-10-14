@@ -63,8 +63,9 @@
 
 
 // stupid insrtructions
-#define OPCODE_RCP  0x42
-#define OPCODE_LDW  0x3D
+#define OPCODE_RCP  0x42  // relative copy. copy 16bits from *(pc + x) to to *(pc + arg)
+#define OPCODE_LDW  0x3D  // load the watchdog timer with a random value
+#define OPCODE_DLY  0xDE  // decrement A, sleep if 0
 
 
 #define AI_N_PROGRAMS 3
@@ -99,13 +100,13 @@ static const unsigned char ai_programs[] =
    OPCODE_HOP,   0xF2,
    OPCODE_NOP,   0xDF,
      // PROGRAM 4
-   OPCODE_NOP,   0x02,
-   OPCODE_NOP,   0x00,
-   OPCODE_NOP,   0x00,
-   OPCODE_NOP,   0x00,
-   OPCODE_NOP,   0xDB,
-   OPCODE_NOP,   0xEE,
-   OPCODE_NOP,   0xAE,
+   OPCODE_RND,   0x02,
+   OPCODE_AND,   0xFE,
+   OPCODE_TAX,   0x00,
+   OPCODE_RDX,   0x00,
+   OPCODE_MEMW,  0x00,
+   OPCODE_STAX,  0xDB,
+   OPCODE_HOP,   0xF2,
    OPCODE_NOP,   0xDF,
   };
 

@@ -395,6 +395,15 @@ void cpu_tick(byte thread)
   case OPCODE_TXP:
     t->pc = t->x;
     break;
+  case OPCODE_DLY:
+    pc_mod = 1;
+    if (t->a == 0) {
+      pc += 2;
+    }
+    else {
+      t->a--;
+    }
+    break;
   default:
     pc_mod = 1;
     t->pc = 0x2;
