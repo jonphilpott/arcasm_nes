@@ -542,7 +542,7 @@ byte title_screen(void)
   vram_write("VS. CPU MODE", 13);
     
   vram_adr(NTADR_A(11, 16));
-  vram_write("DUEL", 4);
+  vram_write("2P. DUEL", 8);
       
   ppu_wait_frame();
   
@@ -555,6 +555,7 @@ byte title_screen(void)
     if (by2 & (PAD_UP | PAD_DOWN | PAD_SELECT)) {
       if (mode) { mode = 0; }
       else { mode = 1; }
+      sfx_value_change();
     }
     
     if (mode) {
@@ -563,6 +564,7 @@ byte title_screen(void)
     else {
       oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
     }
+    
     oam_hide_rest(oam_id);  
     if (by2 & PAD_START) break;
   }
