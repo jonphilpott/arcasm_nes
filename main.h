@@ -46,7 +46,7 @@
 #define OPCODE_INCA 0x08 // increment A by arg
 #define OPCODE_HOP  0x09 // Relative Jump (PC = PC + Arg) 
 #define OPCODE_JMP  0x0A // Absolote Jump (PC = Arg)
-#define OPCODE_ZHOP 0x0B // Skip next instruction if A = 0
+#define OPCODE_DECY 0x0B // Decrement Y, skip next 0
 #define OPCODE_WLD  0x0C // WIDE LOAD. A = *X, Y=*(X+1)
 #define OPCODE_WCP  0x0D // WIDE COPY *X = A, *(X + 1) = Y
 #define OPCODE_MEMW 0x0E // Mem Wait. Wait until *X != A

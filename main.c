@@ -312,8 +312,9 @@ void cpu_tick(byte thread)
     t->pc = arg;
     pc_mod = 1;
     break;
-  case OPCODE_ZHOP:
-    if (t->a == 0) {
+  case OPCODE_DECY:
+    t->y--;
+    if (t->y == 0) {
       pc_mod = 1;
       t->pc += 4;
     }
@@ -542,7 +543,7 @@ byte title_screen(void)
   vram_write("VS. CPU MODE", 13);
     
   vram_adr(NTADR_A(11, 16));
-  vram_write("2P. DUEL", 8);
+  vram_write("DUEL", 4);
       
   ppu_wait_frame();
   
@@ -555,7 +556,6 @@ byte title_screen(void)
     if (by2 & (PAD_UP | PAD_DOWN | PAD_SELECT)) {
       if (mode) { mode = 0; }
       else { mode = 1; }
-      sfx_value_change();
     }
     
     if (mode) {
@@ -564,7 +564,6 @@ byte title_screen(void)
     else {
       oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
     }
-    
     oam_hide_rest(oam_id);  
     if (by2 & PAD_START) break;
   }
