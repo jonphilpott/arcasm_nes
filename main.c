@@ -451,6 +451,24 @@ void __fastcall__ play_music(void)
      0x13f,
      0x17c,
      0x1ab,
+    
+         // measure 2
+     0x17c,
+     0x152,
+     0x13f,
+     0x152,
+     0x11c,
+     0x152,
+     0x13f,
+     0x152,
+     0x0fd,
+     0x152,
+     0x0e2,
+     0x0fd,
+     0x0e2,
+     0x13f,
+     0x1ab,
+     0x193,
     };
   
   static const int treb_notes[] =
@@ -496,17 +514,16 @@ void __fastcall__ play_music(void)
   static byte m_delay = 0;
     
 
-  APU_TRIANGLE_LENGTH(bass_notes[m_ptr & 0xF], 2);
+  APU_TRIANGLE_LENGTH(bass_notes[m_ptr & 0x1F], 2);
   
   
-  
-  APU_PULSE_DECAY(
-		  1,
+#if 0
+  APU_PULSE_DECAY(1,
 		  treb_notes[m_ptr & 0x1F], 
 		  DUTY_75,
 		  2, 
 		  10);
-  
+#endif
   
   APU_PULSE_SET_VOLUME(1, DUTY_75, 3);
   
