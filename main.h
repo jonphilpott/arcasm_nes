@@ -60,6 +60,7 @@
 #define OPCODE_AND  0x16 // A = A & Arg
 #define OPCODE_TPX  0x17 // Transfer P->X
 #define OPCODE_TXP  0x18 // Transfer X->P
+#define OPCODE_XOR  0x19 // A = A ^ Arg
 
 
 // stupid insrtructions

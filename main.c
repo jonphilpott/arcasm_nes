@@ -390,6 +390,9 @@ void cpu_tick(byte thread)
   case OPCODE_AND:
     t->a = t->a & arg;
     break;
+  case OPCODE_XOR:
+    t->a = t->a ^ arg;
+    break;
   case OPCODE_TPX:
     t->x = t->pc;
     break;
