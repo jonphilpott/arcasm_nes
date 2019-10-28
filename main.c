@@ -567,23 +567,32 @@ byte title_screen(void)
       
   ppu_wait_frame();
   
+  vram_adr(NTADR_A(11, 20));
+  vram_write("SANDBOX", 7);
+  
   vram_adr(NTADR_A(2, 26));
   vram_write("> Z6580 CPU SYSTEM", 18);
     
   while (1) {
     get_random_byte(1);
     by2 = pad_trigger(0) | pad_trigger(1);
-    if (by2 & (PAD_UP | PAD_DOWN | PAD_SELECT)) {
-      if (mode) { mode = 0; }
-      else { mode = 1; }
+    if (by2 & (PAD_DOWN | PAD_SELECT)) {
+      mode++;
     }
     
-    if (mode) {
-      oam_id = oam_spr(72, 128, 0x1F, 1, oam_id);
-    } 
-    else {
-      oam_id = oam_spr(72, 95, 0x1F, 1, oam_id);
+    if (by2 & (PAD_UP)) {
+      if (mode == 0) {
+      	mode = 2;
+      }
+      else {
+      	mode--;
+      }
     }
+    
+    mode = mode % 3;
+    
+ 
+      oam_id = oam_spr(72, 95 + (mode * 32), 0x1F, 1, oam_id);
     oam_hide_rest(oam_id);  
     if (by2 & PAD_START) break;
   }
@@ -922,13 +931,15 @@ void draw_status()
   vrambuf_put(NTADR_A(19, 2), C_BUF, 8);
   
   memfill(C_BUF, 0, 10);
-  if (game_victory_style == 1) {
-    itoa(watchdog, C_BUF, 16);
-    vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
-  }
-  else {
-    itoa(free_memory_count_last, C_BUF, 16);
-    vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
+  if (game_mode != GAME_MODE_SANDBOX) {
+  	if (game_victory_style == 1) {
+   	 itoa(watchdog, C_BUF, 16);
+    	 vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
+  	}
+  	else {
+    	  itoa(free_memory_count_last, C_BUF, 16);
+    	   vrambuf_put(NTADR_A(18, 26), C_BUF, 10);
+  	}
   }
   
   ppu_wait_frame();
@@ -990,11 +1001,17 @@ void draw_gameloop_bg()
   vram_write("P2 SCORE:", 9);
   
   vram_adr(NTADR_A(8, 26));
+  
+  if (game_mode == GAME_MODE_SANDBOX) {
+  	vram_write("SANDBOX MODE", 12);
+  }
+  else {
   if (game_victory_style == 1) {
     vram_write("WATCHDOG: ", 10);
   }
   else {
     vram_write("FREE MEM: ", 10);
+  }
   }
   
   vram_adr(NTADR_A(1, 3));
@@ -1122,6 +1139,10 @@ void handle_enemies()
 
 byte gameover_check()
 {
+  if (game_mode == GAME_MODE_SANDBOX) {
+     return false;
+  }
+  
   if (game_victory_style == 1) {
     if (watchdog == 0) {
       return true;
